@@ -120,4 +120,4 @@ The current environment uses `dtls_verify=no` for local development. For product
 
 ---
 
-**Developed with ❤️ by Faycal & Antigravity**
+**Developed with ❤️ by Faycal helped by Ai of course**
