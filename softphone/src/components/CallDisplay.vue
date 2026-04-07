@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Mic, MicOff, PhoneOff, User, Volume2, ShieldCheck } from 'lucide-vue-next';
+import { Mic, MicOff, PhoneOff, Phone, User, Volume2, ShieldCheck } from 'lucide-vue-next';
 import { ref, computed, watch, onUnmounted } from 'vue';
 
 const props = defineProps({
@@ -55,6 +55,7 @@ const toggleMute = () => {
     
     <!-- Background Call Glow -->
     <div v-if="currentCall.status === 'In Call'" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-accent/20 blur-[100px] rounded-full animate-pulse-slow"></div>
+    <div v-else-if="currentCall.isIncoming" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-emerald-500/20 blur-[100px] rounded-full animate-pulse-slow"></div>
     <div v-else class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/20 blur-[100px] rounded-full animate-pulse-slow"></div>
 
     <!-- Avatar Identity HUD -->
@@ -98,10 +99,28 @@ const toggleMute = () => {
       <p class="text-5xl font-extralight text-white/90 mt-10 tabular-nums tracking-tighter opacity-80">{{ formattedDuration }}</p>
     </div>
 
-    <!-- Primary Control -->
-    <div class="mt-auto flex w-full justify-center relative z-10 pb-4">
-      <button @click="emit('hangup')" 
-              class="w-20 h-20 rounded-full bg-danger text-white flex items-center justify-center shadow-[0_0_30px_0_rgba(244,63,94,0.4)] hover:shadow-[0_0_40px_0_rgba(244,63,94,0.6)] hover:scale-105 active:scale-95 transition-all duration-300 group"
+    <!-- Primary Controls -->
+    <div class="mt-auto flex w-full justify-center gap-8 relative z-10 pb-4">
+
+      <!-- Answer Button (incoming calls only) -->
+      <div v-if="currentCall.isIncoming && currentCall.status !== 'In Call'" class="relative">
+        <!-- Ripple rings -->
+        <span class="absolute inset-0 rounded-full bg-emerald-500/30 animate-ping"></span>
+        <span class="absolute inset-[-8px] rounded-full border border-emerald-500/20 animate-pulse"></span>
+        <button
+          id="btn-answer"
+          @click="emit('answer')"
+          class="relative w-20 h-20 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-[0_0_30px_0_rgba(16,185,129,0.5)] hover:shadow-[0_0_45px_0_rgba(16,185,129,0.7)] hover:scale-110 active:scale-95 transition-all duration-300 group"
+        >
+          <Phone class="w-8 h-8 group-hover:scale-110 transition-transform" />
+        </button>
+      </div>
+
+      <!-- Hangup / Reject Button -->
+      <button
+        id="btn-hangup"
+        @click="emit('hangup')"
+        class="w-20 h-20 rounded-full bg-danger text-white flex items-center justify-center shadow-[0_0_30px_0_rgba(244,63,94,0.4)] hover:shadow-[0_0_40px_0_rgba(244,63,94,0.6)] hover:scale-105 active:scale-95 transition-all duration-300 group"
       >
         <PhoneOff class="w-8 h-8 group-hover:scale-110 transition-transform" />
       </button>
