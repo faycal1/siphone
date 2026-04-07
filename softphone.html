@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Asterisk Softphone</title>
+<script src="./jssip.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .phone {
+    width: 340px;
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e5e5e0;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+  .status-bar {
+    padding: 14px 18px;
+    border-bottom: 1px solid #f0f0eb;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fafaf8;
+  }
+  .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: #ccc;
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .dot.registered { background: #3B6D11; }
+  .dot.calling     { background: #BA7517; }
+  .dot.incall      { background: #0F6E56; }
+  .dot.error       { background: #A32D2D; }
+  .status-text { font-size: 13px; color: #666; flex: 1; }
+  .ext-badge {
+    font-size: 12px; color: #888;
+    background: #f0f0eb;
+    border-radius: 20px;
+    padding: 2px 10px;
+  }
+  .display {
+    padding: 20px 18px 10px;
+    text-align: center;
+    background: #fff;
+  }
+  .number-display {
+    font-size: 32px;
+    font-weight: 500;
+    color: #111;
+    letter-spacing: 3px;
+    min-height: 44px;
+  }
+  .call-info {
+    font-size: 12px; color: #999;
+    margin-top: 4px; min-height: 18px;
+  }
+  .timer {
+    font-size: 13px; color: #666;
+    min-height: 22px; margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .dialpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 10px 18px;
+  }
+  .key {
+    background: #f7f7f4;
+    border: 1px solid #e8e8e4;
+    border-radius: 10px;
+    padding: 12px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.1s;
+    user-select: none;
+  }
+  .key:hover  { background: #efefeb; }
+  .key:active { transform: scale(0.95); background: #e8e8e4; }
+  .key .digit { font-size: 20px; font-weight: 500; color: #222; line-height: 1; }
+  .key .sub   { font-size: 9px; color: #aaa; margin-top: 2px; letter-spacing: 1px; }
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    padding: 10px 18px 18px;
+    align-items: center;
+  }
+  .btn-call {
+    background: #1D9E75;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    cursor: pointer;
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn-call:hover { background: #0F6E56; }
+  .btn-hangup {
+    background: #A32D2D;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    cursor: pointer;
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn-hangup:hover { background: #791F1F; }
+  .btn-hangup.visible { display: flex; }
+  .btn-call.hidden    { display: none; }
+  .btn-clear {
+    background: #f7f7f4;
+    border: 1px solid #e8e8e4;
+    border-radius: 10px;
+    padding: 14px;
+    cursor: pointer;
+    color: #666;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-clear:hover { background: #efefeb; }
+  .config {
+    padding: 14px 18px 18px;
+    border-top: 1px solid #f0f0eb;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    background: #fafaf8;
+  }
+  .config label {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 3px;
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .config input {
+    font-size: 13px;
+    padding: 8px 10px;
+    border: 1px solid #e8e8e4;
+    border-radius: 8px;
+    background: #fff;
+    color: #222;
+    width: 100%;
+    outline: none;
+  }
+  .config input:focus { border-color: #1D9E75; }
+  .full-col { grid-column: 1 / -1; }
+  .btn-register {
+    grid-column: 1 / -1;
+    background: #222;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #fff;
+    transition: background 0.15s;
+    margin-top: 2px;
+  }
+  .btn-register:hover { background: #333; }
+  .log {
+    padding: 10px 18px 14px;
+    border-top: 1px solid #f0f0eb;
+    background: #fafaf8;
+    max-height: 80px;
+    overflow-y: auto;
+  }
+  .log p {
+    font-size: 11px;
+    color: #999;
+    font-family: monospace;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="status-bar">
+    <div class="dot" id="dot"></div>
+    <span class="status-text" id="status-text">Not registered</span>
+    <span class="ext-badge" id="ext-badge">ext: —</span>
+  </div>
+
+  <div class="display">
+    <div class="number-display" id="number-display">—</div>
+    <div class="call-info" id="call-info"></div>
+    <div class="timer" id="timer"></div>
+  </div>
+
+  <div class="dialpad">
+    <div class="key" onclick="pressKey('1')"><div class="digit">1</div><div class="sub">&nbsp;</div></div>
+    <div class="key" onclick="pressKey('2')"><div class="digit">2</div><div class="sub">ABC</div></div>
+    <div class="key" onclick="pressKey('3')"><div class="digit">3</div><div class="sub">DEF</div></div>
+    <div class="key" onclick="pressKey('4')"><div class="digit">4</div><div class="sub">GHI</div></div>
+    <div class="key" onclick="pressKey('5')"><div class="digit">5</div><div class="sub">JKL</div></div>
+    <div class="key" onclick="pressKey('6')"><div class="digit">6</div><div class="sub">MNO</div></div>
+    <div class="key" onclick="pressKey('7')"><div class="digit">7</div><div class="sub">PQRS</div></div>
+    <div class="key" onclick="pressKey('8')"><div class="digit">8</div><div class="sub">TUV</div></div>
+    <div class="key" onclick="pressKey('9')"><div class="digit">9</div><div class="sub">WXYZ</div></div>
+    <div class="key" onclick="pressKey('*')"><div class="digit">*</div><div class="sub">&nbsp;</div></div>
+    <div class="key" onclick="pressKey('0')"><div class="digit">0</div><div class="sub">+</div></div>
+    <div class="key" onclick="pressKey('#')"><div class="digit">#</div><div class="sub">&nbsp;</div></div>
+  </div>
+
+  <div class="actions">
+    <div></div>
+    <button class="btn-call" id="btn-call" onclick="makeCall()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 .18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+      </svg>
+      Call
+    </button>
+    <button class="btn-hangup" id="btn-hangup" onclick="hangUp()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+      Hang up
+    </button>
+    <button class="btn-clear" onclick="clearLast()">⌫</button>
+  </div>
+
+  <div class="config">
+    <div class="full-col">
+      <label>WebSocket Server</label>
+      <input id="cfg-server" value="ws://127.0.0.1:8088/ws"/>
+    </div>
+    <div>
+      <label>Extension</label>
+      <input id="cfg-ext" value="101"/>
+    </div>
+    <div>
+      <label>Password</label>
+      <input id="cfg-pass" value="101pass" type="password"/>
+    </div>
+    <button class="btn-register" id="btn-register" onclick="register()">
+      Connect to Asterisk
+    </button>
+  </div>
+
+  <div class="log" id="log"></div>
+
+</div>
+
+<script>
+let ua = null, session = null, dialedNumber = '', timerInterval = null, seconds = 0;
+
+function log(msg) {
+  const el = document.getElementById('log');
+  const p = document.createElement('p');
+  p.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
+  el.appendChild(p);
+  el.scrollTop = el.scrollHeight;
+}
+
+function setStatus(text, type) {
+  document.getElementById('status-text').textContent = text;
+  const dot = document.getElementById('dot');
+  dot.className = 'dot' + (type ? ' ' + type : '');
+  log(text);
+}
+
+function pressKey(k) {
+  dialedNumber += k;
+  document.getElementById('number-display').textContent = dialedNumber || '—';
+  if (session && session.isEstablished()) session.sendDTMF(k);
+}
+
+function clearLast() {
+  dialedNumber = dialedNumber.slice(0, -1);
+  document.getElementById('number-display').textContent = dialedNumber || '—';
+}
+
+function startTimer() {
+  seconds = 0;
+  timerInterval = setInterval(() => {
+    seconds++;
+    const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+    document.getElementById('timer').textContent = m + ':' + s;
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  document.getElementById('timer').textContent = '';
+}
+
+function register() {
+  if (ua) { try { ua.stop(); } catch(e){} ua = null; }
+
+  const server = document.getElementById('cfg-server').value.trim();
+  const ext    = document.getElementById('cfg-ext').value.trim();
+  const pass   = document.getElementById('cfg-pass').value.trim();
+  const domain = server.replace(/^wss?:\/\//, '').split('/')[0].split(':')[0];
+
+  document.getElementById('ext-badge').textContent = 'ext: ' + ext;
+  document.getElementById('btn-register').textContent = 'Connecting...';
+  setStatus('Connecting to ' + server, '');
+
+  if (typeof JsSIP === 'undefined') {
+    setStatus('Error: JsSIP library not loaded. Check jssip.min.js exists.', 'error');
+    alert('JsSIP library not found. Please ensure jssip.min.js is in the same directory as this file.');
+    return;
+  }
+
+  JsSIP.debug.disable('JsSIP:*');
+
+  const config = {
+    sockets  : [new JsSIP.WebSocketInterface(server)],
+    uri      : 'sip:' + ext + '@' + domain,
+    password : pass,
+    register : true,
+    register_expires: 300,
+    session_timers: false
+  };
+
+  try {
+    ua = new JsSIP.UA(config);
+
+    ua.on('registered', () => {
+      setStatus('Registered — ready to call', 'registered');
+      document.getElementById('btn-register').textContent = 'Re-connect';
+    });
+    ua.on('unregistered', () => {
+      setStatus('Unregistered', '');
+      document.getElementById('btn-register').textContent = 'Connect to Asterisk';
+    });
+    ua.on('registrationFailed', (e) => {
+      setStatus('Registration failed: ' + (e.cause || 'unknown'), 'error');
+      document.getElementById('btn-register').textContent = 'Connect to Asterisk';
+    });
+    ua.on('connected',    () => log('WebSocket connected'));
+    ua.on('disconnected', () => log('WebSocket disconnected'));
+
+    ua.on('newRTCSession', (e) => {
+      session = e.session;
+
+      if (session.direction === 'incoming') {
+        const caller = session.remote_identity.uri.user;
+        setStatus('Incoming call from ' + caller, 'calling');
+        document.getElementById('call-info').textContent = 'Incoming from ' + caller;
+        document.getElementById('number-display').textContent = caller;
+        document.getElementById('btn-call').classList.add('hidden');
+        document.getElementById('btn-hangup').classList.add('visible');
+        session.answer({ mediaConstraints: { audio: true, video: false } });
+      }
+
+      session.on('accepted', () => {
+        setStatus('In call', 'incall');
+        document.getElementById('call-info').textContent = 'Connected';
+        startTimer();
+      });
+      session.on('confirmed', () => {
+        setStatus('In call', 'incall');
+        startTimer();
+      });
+      session.on('ended', () => {
+        setStatus('Call ended', 'registered');
+        document.getElementById('call-info').textContent = '';
+        document.getElementById('btn-call').classList.remove('hidden');
+        document.getElementById('btn-hangup').classList.remove('visible');
+        stopTimer(); session = null;
+      });
+      session.on('failed', (ev) => {
+        setStatus('Call failed: ' + (ev.cause || ''), 'error');
+        document.getElementById('call-info').textContent = '';
+        document.getElementById('btn-call').classList.remove('hidden');
+        document.getElementById('btn-hangup').classList.remove('visible');
+        stopTimer(); session = null;
+      });
+
+      session.connection && session.connection.addEventListener('addstream', (ev) => {
+        const audio = new Audio();
+        audio.srcObject = ev.stream;
+        audio.play();
+      });
+      session.on('peerconnection', (ev) => {
+        ev.peerconnection.addEventListener('track', (trackEv) => {
+          if (trackEv.streams[0]) {
+            const audio = new Audio();
+            audio.srcObject = trackEv.streams[0];
+            audio.play();
+          }
+        });
+      });
+    });
+
+    ua.start();
+  } catch(err) {
+    setStatus('Error: ' + err.message, 'error');
+    document.getElementById('btn-register').textContent = 'Connect to Asterisk';
+  }
+}
+
+function makeCall() {
+  if (!ua) { alert('Connect to Asterisk first!'); return; }
+  if (!dialedNumber) { alert('Enter a number to dial'); return; }
+
+  const server = document.getElementById('cfg-server').value.trim();
+  const domain = server.replace(/^wss?:\/\//, '').split('/')[0].split(':')[0];
+
+  setStatus('Calling ' + dialedNumber + '...', 'calling');
+  document.getElementById('call-info').textContent = 'Ringing...';
+  document.getElementById('btn-call').classList.add('hidden');
+  document.getElementById('btn-hangup').classList.add('visible');
+
+  try {
+    session = ua.call('sip:' + dialedNumber + '@' + domain, {
+      mediaConstraints: { audio: true, video: false },
+      pcConfig: { iceServers: [] }
+    });
+  } catch(err) {
+    setStatus('Call error: ' + err.message, 'error');
+    document.getElementById('btn-call').classList.remove('hidden');
+    document.getElementById('btn-hangup').classList.remove('visible');
+  }
+}
+
+function hangUp() {
+  if (session) { try { session.terminate(); } catch(e){} }
+  document.getElementById('btn-call').classList.remove('hidden');
+  document.getElementById('btn-hangup').classList.remove('visible');
+  document.getElementById('call-info').textContent = '';
+  stopTimer();
+  setStatus('Registered — ready to call', 'registered');
+  session = null;
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.key >= '0' && e.key <= '9') pressKey(e.key);
+  if (e.key === '*' || e.key === '#') pressKey(e.key);
+  if (e.key === 'Backspace') clearLast();
+  if (e.key === 'Enter') session ? hangUp() : makeCall();
+});
+</script>
+</body>
+</html>
