@@ -6,3 +6,6 @@ services:
     volumes:
       - ./config:/etc/asterisk
     restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
