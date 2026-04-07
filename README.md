@@ -119,5 +119,3 @@ The softphone includes a dedicated, always-visible **System Logs** panel on the 
 The current environment uses `dtls_verify=no` for local development. For production deployments, ensure you replace the certificates in `config/` with trusted CA-signed certificates and update your PJSIP configuration.
 
 ---
-
-**Developed with ❤️ by Faycal helped by Ai of course**
