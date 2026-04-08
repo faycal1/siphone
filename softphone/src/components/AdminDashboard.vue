@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Activity, Users, Globe, RefreshCw, AlertCircle } from 'lucide-vue-next';
+import { Activity, Users, Globe, RefreshCw, AlertCircle, Plus, ShieldCheck } from 'lucide-vue-next';
 import { useAdmin } from '../composables/useAdmin';
-import { onMounted, watch } from 'vue';
+import { onMounted, watch, ref } from 'vue';
 
 const props = defineProps<{
   serverIp: string;
@@ -22,11 +22,112 @@ watch(() => props.serverIp, (newIp) => {
     stopMonitoring();
   }
 });
+
+// PoC Extension Management
+const newExt = ref('');
+const newPass = ref('');
+const newName = ref('');
+const isSubmitting = ref(false);
+const statusMsg = ref({ text: '', type: '' });
+
+const handleAddExtension = async () => {
+  if (!newExt.value || !newPass.value) return;
+  
+  isSubmitting.value = true;
+  statusMsg.value = { text: 'Adding extension...', type: 'info' };
+
+  try {
+    const response = await fetch(`http://${props.serverIp}:5000/add-extension`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        extension: newExt.value,
+        password: newPass.value,
+        name: newName.value || `Agent ${newExt.value}`
+      })
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      statusMsg.value = { text: 'Success! Extension added.', type: 'success' };
+      newExt.value = '';
+      newPass.value = '';
+      newName.value = '';
+      // Refresh stats after a short delay
+      setTimeout(() => {
+        statusMsg.value = { text: '', type: '' };
+      }, 3000);
+    } else {
+      statusMsg.value = { text: data.error || 'Failed to add extension', type: 'error' };
+    }
+  } catch (err: any) {
+    statusMsg.value = { text: 'Connection failed', type: 'error' };
+  } finally {
+    isSubmitting.value = false;
+  }
+};
 </script>
 
 <template>
   <div class="flex flex-col gap-6 h-full overflow-hidden">
     
+    <!-- Extension Management PoC -->
+    <div class="glass p-5 rounded-3xl border-white/5 bg-white/[0.02] flex flex-col gap-4">
+      <div class="flex items-center gap-2 px-1">
+        <Plus class="w-4 h-4 text-accent" />
+        <span class="text-[10px] font-black uppercase tracking-widest text-white/50">Add New Member</span>
+      </div>
+      
+      <div class="grid grid-cols-3 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[8px] font-black uppercase tracking-widest text-white/20 px-1">Extension</label>
+          <input 
+            v-model="newExt" 
+            placeholder="e.g. 103" 
+            class="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-accent/40 outline-none transition-all"
+          />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[8px] font-black uppercase tracking-widest text-white/20 px-1">Password</label>
+          <input 
+            v-model="newPass" 
+            type="password"
+            placeholder="••••••••" 
+            class="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-accent/40 outline-none transition-all"
+          />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[8px] font-black uppercase tracking-widest text-white/20 px-1">Full Name</label>
+          <input 
+            v-model="newName" 
+            placeholder="John Doe" 
+            class="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-accent/40 outline-none transition-all"
+          />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <div v-if="statusMsg.text" :class="[
+          'text-[9px] font-bold px-3 py-1 rounded-full',
+          statusMsg.type === 'success' ? 'text-accent bg-accent/10' : 
+          statusMsg.type === 'error' ? 'text-rose-500 bg-rose-500/10' : 'text-white/40 bg-white/5'
+        ]">
+          {{ statusMsg.text }}
+        </div>
+        <div v-else></div>
+
+        <button 
+          @click="handleAddExtension"
+          :disabled="isSubmitting || !newExt || !newPass"
+          class="flex items-center gap-2 px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg shadow-accent/20"
+        >
+          <Plus v-if="!isSubmitting" class="w-3.5 h-3.5 text-black" />
+          <RefreshCw v-else class="w-3.5 h-3.5 text-black animate-spin" />
+          <span class="text-[10px] font-black text-black uppercase tracking-tight">Provision</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Stats Overview Cards -->
     <div class="grid grid-cols-3 gap-4">
       <div class="glass p-4 rounded-3xl border-white/5 bg-white/[0.02] flex flex-col gap-1 transition-all hover:bg-white/[0.05]">
