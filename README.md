@@ -7,6 +7,7 @@ A professional, high-fidelity WebRTC softphone workstation integrated with a Doc
 ## 🛠️ System Architecture
 
 - **Asterisk Core**: Running Debian 13 (Trixie) with PJSIP and Secure WebSockets (WSS).
+- **Backend API**: Python Flask service for dynamic provisioning (Extensions/Queues).
 - **Frontend**: Vue 3 + TypeScript + Vite 8 + Tailwind CSS v4.
 - **Protocol**: JsSIP for WebRTC signaling and DTLS v1.3 for media security.
 
@@ -46,6 +47,18 @@ npm run dev
 ```
 The application will be live at: **[http://localhost:5174/](http://localhost:5174/)**
 
+### 3. Start the Management API (Optional but recommended)
+The management API allows you to add extensions and manage queues directly from the UI.
+
+```bash
+# Install Python dependencies
+pip3 install flask flask-cors --break-system-packages
+
+# Start the API server
+python3 config-api/server.py
+```
+The API will run on: **[http://localhost:5000/](http://localhost:5000/)**
+
 ---
 
 ## ⚙️ Configuration
@@ -61,17 +74,44 @@ You can change the active extension and Asterisk server IP directly in the app:
 2. Enter your **Extension**, **Password**, and **Asterisk IP**.
 3. Click **Apply Config**. Your settings are persisted in `localStorage`.
 
-### Adding New Numbers/Extensions
-If you want to add new dialable numbers (like 103, 104, or new Echo Tests):
+### 🆕 Adding New Extensions (UI Mode)
+You can now add extensions directly from the **Admin Dashboard** in the softphone UI:
+1. Navigate to the **Admin Dashboard** tab.
+2. Fill in the **Extension**, **Password**, and **Full Name**.
+3. Click **Provision**. The system will automatically update the config files and reload Asterisk.
+
+### Manual Mode (Legacy)
+If you want to add new dialable numbers manually:
 1. Open `config/extensions.conf` and scroll to the bottom to the `[internal]` block.
 2. Add your routing rule, for example: `exten => 103,1,Dial(PJSIP/103,30)`
-3. Reload the Asterisk dialplan to apply the changes immediately:
-   ```bash
-   docker exec asterisk asterisk -rx "dialplan reload"
-   ```
-*(Note: If you are adding a physical extension, remember to also create the `[103]` user blocks inside `config/pjsip.conf` and run `docker exec asterisk asterisk -rx "pjsip reload"`).*
+3. Reload the Asterisk dialplan: `docker exec asterisk asterisk -rx "dialplan reload"`
 
 ---
+
+## 🎧 Call Queues (ACD)
+
+The system is configured with a **Support Queue** (`support`) that allows multiple callers to wait for the first available agent.
+
+### Using the Support Queue
+*   **Queue Number**: `800`
+*   **Agents**: Extensions `101`, `102`, `104`, and `105` are pre-assigned as members.
+*   **Strategy**: `ringall` (All available agents ring at once).
+
+To test, dial **800** from any registered extension.
+
+### Management Commands
+| Command | Description |
+|---------|-------------|
+| `queue show support` | View live queue status (wait times, agents, calls). |
+| `queue show agents` | See which agents are currently logged in/out. |
+| `module reload app_queue.so` | Apply changes made to `queues.conf`. |
+
+---
+
+```bash
+watch -n 1 'docker exec asterisk asterisk -rx "queue show support"'
+watch -n 1 'docker exec asterisk asterisk -rx "queue show agents"'
+``` 
 
 ## 🔍 Debugging & Monitoring
 
