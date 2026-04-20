@@ -15,12 +15,25 @@ const emit = defineEmits(['update', 'close']);
 const localConfig = ref({ ...props.config });
 const showPassword = ref(false);
 
-// Extract IP from wsUrl for easier editing
-const serverIp = ref(localConfig.value.wsUrl.replace('ws://', '').replace(':8088/ws', ''));
+// Presets Definition
+const presets = [
+  {
+    name: 'Local Dev',
+    wsUrl: 'ws://127.0.0.1:8088/ws',
+    extension: '101',
+    password: '101pass'
+  },
+  {
+    name: 'CSC360 Demo',
+    wsUrl: import.meta.env.VITE_REMOTE_WS_URL || 'wss://demo.cscall360.com:8089/ws',
+    extension: import.meta.env.VITE_REMOTE_EXTENSION || '100100',
+    password: import.meta.env.VITE_REMOTE_PASSWORD || 'mlsdskys143shjdjh'
+  }
+];
 
-watch(serverIp, (newIp) => {
-  localConfig.value.wsUrl = `ws://${newIp}:8088/ws`;
-});
+const applyPreset = (preset: typeof presets[0]) => {
+  localConfig.value = { ...preset };
+};
 
 const handleSave = () => {
   emit('update', { ...localConfig.value });
@@ -30,7 +43,7 @@ const handleSave = () => {
 
 <template>
   <div class="absolute inset-0 z-50 flex items-center justify-center p-8 bg-black/40 backdrop-blur-sm transition-all duration-500">
-    <div class="glass w-full max-w-[340px] rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border-white/10 animate-fade-in-scale">
+    <div class="glass w-full max-w-[380px] rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border-white/10 animate-fade-in-scale">
       
       <!-- Header -->
       <div class="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
@@ -45,58 +58,76 @@ const handleSave = () => {
         </button>
       </div>
 
+      <!-- Presets Section -->
+      <div class="px-8 pt-6">
+        <label class="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 mb-3 block">Quick Presets</label>
+        <div class="grid grid-cols-2 gap-3">
+          <button 
+            v-for="preset in presets" 
+            :key="preset.name"
+            @click="applyPreset(preset)"
+            class="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10 transition-all group"
+          >
+            <span class="text-[10px] font-bold text-white/60 group-hover:text-white transition-colors">{{ preset.name }}</span>
+            <span class="text-[7px] text-white/20 tracking-tighter truncate w-full text-center">{{ preset.wsUrl }}</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Form Content -->
       <div class="p-8 flex flex-col gap-6">
         
-        <!-- Extension Field -->
-        <div class="flex flex-col gap-2">
-          <label class="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Extension</label>
-          <div class="relative group">
-            <User class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
-            <input 
-              v-model="localConfig.extension"
-              type="text" 
-              placeholder="e.g. 101"
-              class="w-full bg-white/[0.03] border border-white/10 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white font-medium outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/10"
-            />
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Extension Field -->
+          <div class="flex flex-col gap-2">
+            <label class="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Extension</label>
+            <div class="relative group">
+              <User class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
+              <input 
+                v-model="localConfig.extension"
+                type="text" 
+                placeholder="100"
+                class="w-full bg-white/[0.03] border border-white/10 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white font-medium outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/10"
+              />
+            </div>
+          </div>
+
+          <!-- Password Field -->
+          <div class="flex flex-col gap-2">
+            <label class="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Secret</label>
+            <div class="relative group">
+              <Lock class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
+              <input 
+                v-model="localConfig.password"
+                :type="showPassword ? 'text' : 'password'" 
+                placeholder="••••"
+                class="w-full bg-white/[0.03] border border-white/10 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white font-medium outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/10"
+              />
+              <button 
+                type="button"
+                @click="showPassword = !showPassword"
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/40 transition-colors"
+              >
+                <Eye v-if="!showPassword" class="w-4 h-4" />
+                <EyeOff v-else class="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- Password Field -->
+        <!-- WebSocket URL Field -->
         <div class="flex flex-col gap-2">
-          <label class="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">SIP Password</label>
-          <div class="relative group">
-            <Lock class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
-            <input 
-              v-model="localConfig.password"
-              :type="showPassword ? 'text' : 'password'"
-              placeholder="••••••••"
-              class="w-full bg-white/[0.03] border border-white/10 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white font-medium outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/10"
-            />
-            <button 
-              @click="showPassword = !showPassword" 
-              type="button"
-              class="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/80 transition-colors"
-            >
-              <EyeOff v-if="showPassword" class="w-4 h-4" />
-              <Eye v-else class="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        <!-- Server IP Field -->
-        <div class="flex flex-col gap-2">
-          <label class="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Asterisk IP</label>
+          <label class="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">WebSocket URL</label>
           <div class="relative group">
             <Globe class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
             <input 
-              v-model="serverIp"
+              v-model="localConfig.wsUrl"
               type="text" 
-              placeholder="e.g. 127.0.0.1"
+              placeholder="ws://...:8088/ws"
               class="w-full bg-white/[0.03] border border-white/10 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white font-medium outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/10"
             />
           </div>
-          <span class="text-[8px] text-white/20 uppercase tracking-tighter ml-1 font-mono">WS Port: 8088 | Endpoint: /ws</span>
+          <span class="text-[8px] text-white/20 uppercase tracking-tighter ml-1 font-mono">Full WS/WSS Endpoint Path</span>
         </div>
 
         <!-- Persuasion / Save Button -->
@@ -106,9 +137,7 @@ const handleSave = () => {
         >
           Apply Config
         </button>
-
       </div>
-
     </div>
   </div>
 </template>
