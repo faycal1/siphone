@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Mic, MicOff, PhoneOff, Phone, User, Volume2, ShieldCheck } from 'lucide-vue-next';
+import { Mic, MicOff, PhoneOff, Phone, User, Volume2, ShieldCheck, LayoutGrid, X, Delete } from 'lucide-vue-next';
 import { ref, computed, watch, onUnmounted } from 'vue';
 
 const props = defineProps({
@@ -9,8 +9,10 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['hangup', 'answer']);
+const emit = defineEmits(['hangup', 'answer', 'dtmf']);
 
+const isKeypadOpen = ref(false);
+const dtmfSequence = ref('');
 const callDuration = ref(0);
 const isMuted = ref(false);
 let timerInterval: any = null;
@@ -34,10 +36,10 @@ const formattedDuration = computed(() => {
   const s = callDuration.value % 60;
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 });
-
 watch(() => props.currentCall.status, (newStatus) => {
   if (newStatus === 'In Call') {
     startTimer();
+    dtmfSequence.value = '';
   } else if (!newStatus) {
     stopTimer();
   }
@@ -84,6 +86,9 @@ const toggleMute = () => {
         <div class="bg-card/80 backdrop-blur-md p-2.5 rounded-full border border-white/10 cursor-pointer hover:bg-white/10 transition-all hover:scale-110 shadow-xl group/btn">
           <Volume2 class="w-4 h-4 text-white/60 group-hover/btn:text-white" />
         </div>
+        <div v-if="currentCall.status === 'In Call'" @click="isKeypadOpen = true" class="bg-card/80 backdrop-blur-md p-2.5 rounded-full border border-white/10 cursor-pointer hover:bg-white/10 transition-all hover:scale-110 shadow-xl group/btn">
+          <LayoutGrid class="w-4 h-4 text-white/60 group-hover/btn:text-white" />
+        </div>
       </div>
     </div>
     
@@ -125,6 +130,54 @@ const toggleMute = () => {
         <PhoneOff class="w-8 h-8 group-hover:scale-110 transition-transform" />
       </button>
     </div>
+
+    <!-- Keypad Overlay -->
+    <Transition name="overlay-fade">
+      <div v-if="isKeypadOpen" class="absolute inset-0 z-50 bg-[#0B0F19]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 rounded-[48px]">
+        <button @click="isKeypadOpen = false" class="absolute top-10 right-10 p-4 text-white/40 hover:text-white transition-colors">
+          <X class="w-8 h-8" />
+        </button>
+        
+        <div class="text-center mb-12">
+          <h3 class="text-xs font-black uppercase tracking-[0.4em] text-accent mb-2">Dial Pad</h3>
+          <div class="h-10 flex items-center justify-center">
+            <span class="text-3xl font-light text-white tracking-[0.2em] animate-in fade-in zoom-in duration-300">{{ dtmfSequence }}</span>
+            <span v-if="!dtmfSequence" class="text-white/20 text-[10px] uppercase tracking-widest">Awaiting Input</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-x-8 gap-y-6 justify-items-center">
+          <button v-for="num in ['1','2','3','4','5','6','7','8','9','*','0','#']" 
+                  :key="num" 
+                  @click="() => { dtmfSequence += num; emit('dtmf', num); }"
+                  class="w-16 h-16 rounded-full flex items-center justify-center text-xl font-light bg-white/[0.03] border border-white/5 shadow-inner transition-all duration-300 hover:bg-accent/20 hover:border-accent/40 active:scale-95 text-white"
+          >
+            {{ num }}
+          </button>
+          
+          <!-- Special Action Keys in Grid -->
+          <div class="w-16 h-16"></div> <!-- Spacer -->
+          
+          <button 
+            @click="dtmfSequence = dtmfSequence.slice(0, -1)"
+            v-if="dtmfSequence"
+            class="w-16 h-16 rounded-full flex items-center justify-center bg-white/[0.02] border border-white/5 shadow-inner transition-all duration-300 hover:bg-rose-500/20 hover:border-rose-500/40 active:scale-95 text-white/40 hover:text-rose-500 animate-in fade-in scale-in duration-300"
+            title="Backspace"
+          >
+            <Delete class="w-6 h-6" />
+          </button>
+          
+          <div v-else class="w-16 h-16"></div> <!-- Spacer if no sequence -->
+          
+          <div class="w-16 h-16"></div> <!-- Spacer -->
+        </div>
+
+        <!-- Secondary Clear Action -->
+        <button v-if="dtmfSequence.length > 3" @click="dtmfSequence = ''" class="mt-8 text-[9px] font-black uppercase tracking-[0.3em] text-white/10 hover:text-rose-500 transition-colors">
+          Reset All
+        </button>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -133,5 +186,16 @@ const toggleMute = () => {
 
 .animate-pulse-slow {
   animation: pulse-slow 6s ease-in-out infinite;
+}
+
+.overlay-fade-enter-active,
+.overlay-fade-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.overlay-fade-enter-from,
+.overlay-fade-leave-to {
+  opacity: 0;
+  transform: scale(1.1);
 }
 </style>

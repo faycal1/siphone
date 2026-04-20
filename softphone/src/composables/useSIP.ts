@@ -155,6 +155,22 @@ export function useSIP() {
     state.logs = [];
   };
 
+  const sendDTMF = (tone: string) => {
+    if (session.value && state.currentCall?.status === 'In Call') {
+      try {
+        const options = {
+          transportType: 'INFO',
+          duration: 100,
+          interToneGap: 500
+        };
+        session.value.sendDTMF(tone, options);
+        addLog(`DTMF Sent: ${tone}`, 'success');
+      } catch (err: any) {
+        addLog(`DTMF Error: ${err.message}`, 'error');
+      }
+    }
+  };
+
   return {
     state,
     connect,
@@ -162,6 +178,7 @@ export function useSIP() {
     makeCall,
     terminateCall,
     answerCall,
-    clearLogs
+    clearLogs,
+    sendDTMF
   };
-}
+};

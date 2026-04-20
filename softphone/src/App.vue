@@ -18,7 +18,7 @@ const config = ref({
 
 const isSettingsOpen = ref(false);
 
-const { state, connect, disconnect, makeCall, terminateCall, answerCall, clearLogs } = useSIP();
+const { state, connect, disconnect, makeCall, terminateCall, answerCall, sendDTMF, clearLogs } = useSIP();
 
 // Derived State
 const serverIp = computed(() => {
@@ -108,6 +108,7 @@ const handleCall = (target: string) => {
                 :currentCall="state.currentCall" 
                 @hangup="terminateCall" 
                 @answer="answerCall" 
+                @dtmf="sendDTMF"
               />
 
               <!-- Standard Dialer Interface -->
