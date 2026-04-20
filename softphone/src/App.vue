@@ -13,7 +13,8 @@ import { Terminal, ShieldCheck, Cpu, RefreshCw } from 'lucide-vue-next';
 const config = ref({
   wsUrl: 'ws://127.0.0.1:8088/ws',
   extension: '101',
-  password: '101pass'
+  password: '101pass',
+  name: 'Local Dev'
 });
 
 const isSettingsOpen = ref(false);
