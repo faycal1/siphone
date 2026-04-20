@@ -153,6 +153,17 @@ The softphone includes a dedicated, always-visible **System Logs** panel on the 
 - SIP Registration events.
 - Incoming/Outgoing call state transitions.
 
+### 🔢 Dial Pad & DTMF Tones
+The softphone includes a functional Dial Pad for sending dial tones (DTMF) during active calls (e.g., navigating IVR menus).
+
+- **How to use**: During an active call, click the **Grid Icon** in the center control panel to open the keypad.
+- **Verification**: Tones are sent via **SIP INFO** signaling and are acknowledged by Asterisk in real-time.
+- **Debugging**: To see the tones arriving at the server in the Asterisk console:
+  ```bash
+  docker exec -it asterisk asterisk -rx "pjsip set logger on"
+  ```
+  Look for `INFO` packets containing `Signal=X`.
+
 ---
 
 ## 🛡️ Security Note
