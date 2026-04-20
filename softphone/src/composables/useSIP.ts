@@ -2,10 +2,21 @@ import { reactive, shallowRef, markRaw } from 'vue';
 import * as JsSIP from 'jssip';
 import { useSounds } from './useSounds';
 
+export enum LogLevel {
+  DEBUG = 0,
+  INFO = 1,
+  NOTICE = 2,
+  ERROR = 3
+}
+
 export function useSIP() {
   const socket = shallowRef<any>(null);
   const ua = shallowRef<JsSIP.UA | null>(null);
   const session = shallowRef<any>(null);
+  const remoteAudio = markRaw(new Audio());
+  
+  remoteAudio.autoplay = true;
+  remoteAudio.hidden = true;
   
   const { playRingtone, playDialTone, playBusyTone, stopAll } = useSounds();
   
@@ -20,25 +31,49 @@ export function useSIP() {
       localStream?: MediaStream;
       remoteStream?: MediaStream;
     } | null,
-    logs: [] as { time: string; msg: string; type: 'info' | 'error' | 'success' }[],
+    activePreset: 'Local Dev',
+    logs: [] as { time: string; msg: string; type: 'info' | 'error' | 'success'; level: LogLevel }[],
   });
 
-  const addLog = (msg: string, type: 'info' | 'error' | 'success' = 'info') => {
+  const sounds = useSounds();
+
+  const sysLog = (msg: string, level: LogLevel = LogLevel.INFO, type: 'info' | 'error' | 'success' = 'info') => {
+    // Filter out DEBUG logs in Demo mode
+    if (state.activePreset === 'CSC360 Demo' && level === LogLevel.DEBUG) {
+      return;
+    }
+
     state.logs.unshift({
       time: new Date().toLocaleTimeString(),
       msg,
-      type
+      type,
+      level
     });
     if (state.logs.length > 50) state.logs.pop();
+  };
+
+  const addLog = (msg: string, type: 'info' | 'error' | 'success' = 'info') => {
+    sysLog(msg, LogLevel.INFO, type);
   };
 
   const connect = (config: {
     wsUrl: string;
     extension: string;
     password: string;
+    name?: string; // Preset name
   }) => {
     try {
-      addLog(`Connecting to ${config.wsUrl}...`);
+      state.activePreset = config.name || 'Custom';
+      sysLog(`Connecting to ${config.wsUrl}... (${state.activePreset})`, LogLevel.INFO);
+      
+      // WARM UP AUDIO
+      sounds.unlockAudio();
+      remoteAudio.play().catch(() => {}); // Prime the global sink
+
+      // Pre-request permissions to avoid "reload" issue
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(() => sysLog('Microphone permission granted', LogLevel.INFO, 'success'))
+        .catch((e) => sysLog(`Microphone permission denied: ${e.message}`, LogLevel.ERROR, 'error'));
       
       let domain = '127.0.0.1';
       try {
@@ -82,16 +117,16 @@ export function useSIP() {
       ua.value.on('disconnected', (data: any) => {
         state.isConnected = false;
         state.isRegistered = false;
-        stopAll();
+        sounds.stopAll();
         const reason = data?.error ? ` (Error: ${data.error})` : '';
-        addLog(`WebSocket Disconnected${reason}`, 'error');
+        sysLog(`WebSocket Disconnected${reason}`, LogLevel.NOTICE, 'error');
         console.error('SIP Disconnected:', data);
       });
 
       ua.value.on('registered', () => {
         state.isRegistered = true;
         state.registrationError = '';
-        addLog('Registered with Asterisk', 'success');
+        sysLog('Registered with Asterisk', LogLevel.INFO, 'success');
       });
 
       ua.value.on('unregistered', () => {
@@ -103,7 +138,7 @@ export function useSIP() {
         state.isRegistered = false;
         state.registrationError = data.cause;
         const extra = data.response ? ` | Status: ${data.response.status_code}` : '';
-        addLog(`Registration Failed: ${data.cause}${extra}`, 'error');
+        sysLog(`Registration Failed: ${data.cause}${extra}`, LogLevel.ERROR, 'error');
         console.error('SIP Registration Failed:', data);
       });
 
@@ -117,27 +152,36 @@ export function useSIP() {
           isIncoming: data.originator === 'remote'
         };
 
+        if (data.originator === 'remote') {
+          sounds.playRingtone();
+        }
+
         const handlePC = (pc: RTCPeerConnection) => {
           if ((pc as any)._captured) return;
           (pc as any)._captured = true;
           
-          addLog('WebRTC PeerConnection Active', 'success');
+          sysLog('WebRTC PeerConnection Active', LogLevel.DEBUG, 'success');
 
           pc.ontrack = (event: RTCTrackEvent) => {
-            addLog(`Remote track received: ${event.track.kind}`, 'info');
+            sysLog(`Remote track received: ${event.track.kind}`, LogLevel.DEBUG, 'info');
             if (state.currentCall) {
               let stream = state.currentCall.remoteStream;
               if (!stream || !(stream instanceof MediaStream)) stream = new MediaStream();
               stream.addTrack(event.track);
               state.currentCall.remoteStream = markRaw(stream);
-              addLog(`Track Attached & Active`, 'success');
+              
+              // Direct attachment to global sink
+              remoteAudio.srcObject = state.currentCall.remoteStream;
+              remoteAudio.play().catch(e => console.warn('Global playback failed:', e));
+              
+              sysLog(`Track attached to global sink`, LogLevel.DEBUG, 'success');
             }
           };
 
           pc.onicecandidate = (event) => {
             if (event.candidate) {
               if (!state.logs.some(l => l.msg.includes('Candidates gathering'))) {
-                addLog('ICE Candidates gathering...', 'info');
+                sysLog('ICE Candidates gathering...', LogLevel.DEBUG, 'info');
               }
             }
           };
@@ -169,7 +213,7 @@ export function useSIP() {
           const hasIce = data.sdp.includes('ice-pwd');
           const hasDtls = data.sdp.includes('fingerprint');
           console.log(`SDP ${data.type} hasIce:${hasIce} hasDtls:${hasDtls}`);
-          addLog(`SDP ${data.type}: ICE=${hasIce ? 'OK' : 'MISSING'} DTLS=${hasDtls ? 'OK' : 'MISSING'}`, 'info');
+          sysLog(`SDP ${data.type}: ICE=${hasIce ? 'OK' : 'MISSING'} DTLS=${hasDtls ? 'OK' : 'MISSING'}`, LogLevel.DEBUG, 'info');
         });
 
         // Additional fallback for stream events
@@ -177,7 +221,7 @@ export function useSIP() {
           console.log('Legacy addstream event:', e.stream.id);
           if (state.currentCall && !state.currentCall.remoteStream) {
             state.currentCall.remoteStream = markRaw(e.stream);
-            addLog('Stream Added (Legacy)', 'success');
+            sysLog('Stream Added (Legacy)', LogLevel.DEBUG, 'success');
           }
         });
 
@@ -193,43 +237,46 @@ export function useSIP() {
 
         newSession.on('connecting', () => {
           if (state.currentCall) state.currentCall.status = 'Connecting...';
-          addLog('Call Connecting...');
+          sysLog('Call Connecting...', LogLevel.NOTICE);
         });
 
         newSession.on('progress', () => {
           if (state.currentCall) state.currentCall.status = 'Ringing...';
-          addLog('Call Progress/Ringing...');
+          sysLog('Call Progress/Ringing...', LogLevel.NOTICE);
+          if (data.originator === 'local') {
+            sounds.playDialTone();
+          }
         });
 
         newSession.on('accepted', () => {
-          stopAll();
+          sounds.stopAll();
           if (state.currentCall && !state.currentCall.status.includes('ICE')) {
             state.currentCall.status = 'In Call';
           }
-          addLog('Call Accepted', 'success');
+          sysLog('Call Accepted', LogLevel.NOTICE, 'success');
         });
 
         newSession.on('confirmed', () => {
-          stopAll();
+          sounds.stopAll();
           if (state.currentCall && !state.currentCall.status.includes('ICE')) {
             state.currentCall.status = 'In Call';
           }
-          addLog('Call Live', 'success');
+          sysLog('Call Live', LogLevel.NOTICE, 'success');
         });
         
         newSession.on('failed', (e: any) => {
-          stopAll();
-          playBusyTone();
+          sounds.stopAll();
+          sounds.playBusyTone();
           state.currentCall = null;
           session.value = null;
-          addLog(`Call Failed: ${e.cause}`, 'error');
+          sysLog(`Call Failed: ${e.cause}`, LogLevel.NOTICE, 'error');
         });
 
         newSession.on('ended', () => {
-          stopAll();
+          sounds.stopAll();
           state.currentCall = null;
           session.value = null;
-          addLog('Call Ended');
+          sysLog('Call Ended', LogLevel.NOTICE);
         });
       });
 
@@ -242,7 +289,8 @@ export function useSIP() {
   const disconnect = () => {
     if (ua.value) {
       ua.value.stop();
-      stopAll();
+      sounds.stopAll();
+      remoteAudio.srcObject = null;
     }
   };
 

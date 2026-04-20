@@ -41,11 +41,26 @@ export function useSounds() {
     });
   };
 
+  const unlockAudio = async () => {
+    try {
+      // Play a tiny bit of any sound to unlock the audio context
+      alertTone.volume = 0.01;
+      await alertTone.play();
+      alertTone.pause();
+      alertTone.currentTime = 0;
+      alertTone.volume = 1.0;
+      console.log('Audio engine unlocked/warmed up');
+    } catch (e) {
+      console.warn('Audio unlock failed:', e);
+    }
+  };
+
   return {
     playRingtone,
     playDialTone,
     playBusyTone,
     playAlert,
-    stopAll
+    stopAll,
+    unlockAudio
   };
 }

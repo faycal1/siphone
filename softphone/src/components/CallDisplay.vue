@@ -52,47 +52,23 @@ const toggleMute = () => {
 };
 
 // Audio Rendering Logic
-const remoteAudio = ref<HTMLAudioElement | null>(null);
-
-watch(() => props.currentCall.remoteStream, (stream) => {
-  if (remoteAudio.value && stream) {
-    console.log('Attaching remote stream to audio element', stream);
-    
-    // Force reset the audio element
-    remoteAudio.value.srcObject = stream;
-    remoteAudio.value.muted = false;
-    remoteAudio.value.volume = 1.0;
-    
-    const playAudio = () => {
-      if (!remoteAudio.value) return;
-      remoteAudio.value.play()
-        .then(() => {
-          console.log('Remote audio playback started');
-        })
-        .catch(err => {
-          console.warn('Autoplay blocked or failed, waiting for user interaction...', err);
-        });
-    };
-    
-    playAudio();
-  }
-}, { immediate: true, deep: true });
+// (Handled globally by useSIP.ts to prevent race conditions on extension 600)
 
 const handleForceAudio = () => {
   console.log('Manual Audio Kickstart requested');
-  if (remoteAudio.value) {
-    remoteAudio.value.play()
-      .then(() => console.log('Manual play successful'))
-      .catch(e => console.error('Manual play failed', e));
+  if (props.currentCall.remoteStream) {
+    // Attempting to play the stream via the browser's global media interface
+    // which useSIP's global element is currently processing
+    const audio = document.querySelector('audio');
+    if (audio) {
+      audio.play().catch(e => console.error('Kickstart failed:', e));
+    }
   }
 };
 </script>
 
 <template>
   <div class="flex flex-col items-center justify-center gap-10 py-10 h-full animate-in fade-in zoom-in duration-700 relative">
-    
-    <!-- Hidden Audio Element for WebRTC -->
-    <audio ref="remoteAudio" autoplay class="hidden"></audio>
     
     <!-- Background Call Glow -->
     <div v-if="currentCall.status === 'In Call'" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-accent/20 blur-[100px] rounded-full animate-pulse-slow"></div>
