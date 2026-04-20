@@ -13,7 +13,8 @@ import { Terminal, ShieldCheck, Cpu, RefreshCw } from 'lucide-vue-next';
 const config = ref({
   wsUrl: 'ws://127.0.0.1:8088/ws',
   extension: '101',
-  password: '101pass'
+  password: '101pass',
+  name: 'Local Dev'
 });
 
 const isSettingsOpen = ref(false);
@@ -51,14 +52,18 @@ const updateConfig = (newConfig: any) => {
 // Admin Monitoring Logic
 const { stats, startMonitoring, stopMonitoring } = useAdmin();
 
+const isLocalhost = (ip: string) => {
+  return ip === 'localhost' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip.startsWith('10.');
+};
+
 onMounted(() => {
-  if (serverIp.value) {
+  if (serverIp.value && isLocalhost(serverIp.value)) {
     startMonitoring(serverIp.value);
   }
 });
 
 watch(serverIp, (newIp) => {
-  if (newIp) {
+  if (newIp && isLocalhost(newIp)) {
     startMonitoring(newIp);
   } else {
     stopMonitoring();

@@ -37,8 +37,8 @@ const formattedDuration = computed(() => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 });
 watch(() => props.currentCall.status, (newStatus) => {
-  if (newStatus === 'In Call') {
-    startTimer();
+  if (newStatus === 'In Call' || newStatus?.includes('connected')) {
+    if (!timerInterval) startTimer();
     dtmfSequence.value = '';
   } else if (!newStatus) {
     stopTimer();
@@ -49,6 +49,21 @@ onUnmounted(() => stopTimer());
 
 const toggleMute = () => {
   isMuted.value = !isMuted.value;
+};
+
+// Audio Rendering Logic
+// (Handled globally by useSIP.ts to prevent race conditions on extension 600)
+
+const handleForceAudio = () => {
+  console.log('Manual Audio Kickstart requested');
+  if (props.currentCall.remoteStream) {
+    // Attempting to play the stream via the browser's global media interface
+    // which useSIP's global element is currently processing
+    const audio = document.querySelector('audio');
+    if (audio) {
+      audio.play().catch(e => console.error('Kickstart failed:', e));
+    }
+  }
 };
 </script>
 
@@ -66,9 +81,37 @@ const toggleMute = () => {
         'w-36 h-36 rounded-full border-[6px] border-white/5 p-1 transition-all duration-500',
         currentCall.status === 'In Call' ? 'shadow-[0_0_50px_0_rgba(16,185,129,0.3)] bg-accent/10 border-accent/30 scale-105' : 'bg-primary/10 border-primary/30 scale-100'
       ]">
-        <div class="w-full h-full rounded-full bg-card overflow-hidden flex items-center justify-center relative shadow-inner">
+        <div class="w-full h-full rounded-full bg-card overflow-hidden flex flex-col items-center justify-center relative shadow-inner">
           <User :class="['w-16 h-16 transition-colors', currentCall.status === 'In Call' ? 'text-accent' : 'text-primary']" />
-          <div v-if="currentCall.status === 'In Call'" class="absolute inset-0 bg-accent/5 animate-pulse"></div>
+          <div class="mt-2 flex flex-col items-center gap-2">
+            <!-- Current SIP Status -->
+            <div class="text-[10px] uppercase tracking-widest text-white/60 font-bold">
+              {{ currentCall.status }}
+            </div>
+
+            <!-- Audio Status Pill -->
+            <div class="px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-2">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              {{ currentCall.remoteStream ? 'Audio Sink Ready' : 'Negotiating Media...' }}
+            </div>
+
+            <!-- Manual Override Button -->
+            <button 
+              v-if="!currentCall.remoteStream || currentCall.status.includes('connected')"
+              @click="handleForceAudio"
+              class="mt-2 px-4 py-2 bg-emerald-500 text-white rounded-lg text-xs font-bold hover:bg-emerald-600 transition-colors flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+            >
+              <Volume2 class="w-3 h-3" />
+              Force Audio Start
+            </button>
+
+            <div v-if="currentCall.remoteStream" class="mt-1 text-[10px] text-white/40">
+              Tracks: {{ currentCall.remoteStream.getTracks().length }} | Active: {{ currentCall.remoteStream.active }}
+            </div>
+          </div>
         </div>
       </div>
       
@@ -77,17 +120,30 @@ const toggleMute = () => {
         <ShieldCheck class="w-3.5 h-3.5 text-accent" />
       </div>
 
-      <!-- Action Indicator -->
-      <div class="absolute -bottom-2 -right-2 flex gap-1">
-        <div @click="toggleMute" class="bg-card/80 backdrop-blur-md p-2.5 rounded-full border border-white/10 cursor-pointer hover:bg-white/10 transition-all hover:scale-110 shadow-xl group/btn">
-          <Mic v-if="!isMuted" class="w-4 h-4 text-white/60 group-hover/btn:text-white" />
-          <MicOff v-else class="w-4 h-4 text-rose-500" />
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-6 relative z-10">
+        <!-- Option Buttons (Mute/Speaker) -->
+        <div class="flex gap-4">
+          <div @click="toggleMute" class="bg-card/80 backdrop-blur-md p-4 rounded-full border border-white/10 cursor-pointer hover:bg-white/10 transition-all hover:scale-110 shadow-xl group/btn">
+            <Mic v-if="!isMuted" class="w-5 h-5 text-white/60 group-hover/btn:text-white transition-colors" />
+            <MicOff v-else class="w-5 h-5 text-rose-500" />
+          </div>
+          <div class="bg-card/80 backdrop-blur-md p-4 rounded-full border border-white/10 cursor-pointer hover:bg-white/10 transition-all hover:scale-110 shadow-xl group/btn">
+            <Volume2 class="w-5 h-5 text-white/60 group-hover/btn:text-white transition-colors" />
+          </div>
         </div>
-        <div class="bg-card/80 backdrop-blur-md p-2.5 rounded-full border border-white/10 cursor-pointer hover:bg-white/10 transition-all hover:scale-110 shadow-xl group/btn">
-          <Volume2 class="w-4 h-4 text-white/60 group-hover/btn:text-white" />
-        </div>
-        <div v-if="currentCall.status === 'In Call'" @click="isKeypadOpen = true" class="bg-card/80 backdrop-blur-md p-2.5 rounded-full border border-white/10 cursor-pointer hover:bg-white/10 transition-all hover:scale-110 shadow-xl group/btn">
-          <LayoutGrid class="w-4 h-4 text-white/60 group-hover/btn:text-white" />
+        
+        <!-- Hangup Button -->
+        <button 
+          @click="emit('hangup')"
+          class="bg-rose-500 p-6 rounded-full shadow-[0_0_40px_0_rgba(244,63,94,0.3)] hover:bg-rose-600 hover:scale-110 active:scale-95 transition-all group/hangup"
+        >
+          <PhoneOff class="w-8 h-8 text-white rotate-[135deg] group-hover/hangup:scale-110 transition-transform" />
+        </button>
+
+        <!-- Keypad Trigger -->
+        <div @click="isKeypadOpen = !isKeypadOpen" class="bg-card/80 backdrop-blur-md p-4 rounded-full border border-white/10 cursor-pointer hover:bg-white/10 transition-all hover:scale-110 shadow-xl group/btn">
+          <LayoutGrid class="w-5 h-5 text-white/60 group-hover/btn:text-white transition-colors" />
         </div>
       </div>
     </div>

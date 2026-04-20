@@ -5,6 +5,7 @@ services:
     network_mode: host
     volumes:
       - ./config:/etc/asterisk
+      - ./sounds:/var/lib/asterisk/sounds/custom:ro
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
