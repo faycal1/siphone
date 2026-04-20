@@ -1,10 +1,13 @@
 import { reactive, shallowRef, markRaw } from 'vue';
 import * as JsSIP from 'jssip';
+import { useSounds } from './useSounds';
 
 export function useSIP() {
   const socket = shallowRef<any>(null);
   const ua = shallowRef<JsSIP.UA | null>(null);
   const session = shallowRef<any>(null);
+  
+  const { playRingtone, playDialTone, playBusyTone, stopAll } = useSounds();
   
   const state = reactive({
     isConnected: false,
@@ -37,13 +40,36 @@ export function useSIP() {
     try {
       addLog(`Connecting to ${config.wsUrl}...`);
       
+      let domain = '127.0.0.1';
+      try {
+        const url = new URL(config.wsUrl);
+        domain = url.hostname;
+      } catch (e) {
+        console.warn('Could not parse wsUrl for domain, falling back to 127.0.0.1');
+      }
+
       socket.value = markRaw(new JsSIP.WebSocketInterface(config.wsUrl));
       
+      // Optimization: Force transport=wss if using a secure websocket
+      const transportSuffix = config.wsUrl.startsWith('wss') ? ';transport=wss' : '';
+
       const configuration = {
         sockets: [socket.value],
-        uri: `sip:${config.extension}@127.0.0.1`,
+        uri: `sip:${config.extension}@${domain}${transportSuffix}`,
         password: config.password,
-        display_name: `Agent ${config.extension}`
+        display_name: `Agent ${config.extension}`,
+        // Optimization: Standard Asterisk keep-alives and session stability
+        register_expires: 600,
+        session_timers: false,
+        // Add STUN servers for NAT traversal on external calls
+        pcConfig: {
+          iceServers: [
+            { urls: ['stun:stun.l.google.com:19302'] }
+          ],
+          bundlePolicy: 'max-bundle',
+          rtcpMuxPolicy: 'require',
+          iceTransportPolicy: 'all'
+        }
       };
 
       ua.value = markRaw(new JsSIP.UA(configuration));
@@ -53,10 +79,13 @@ export function useSIP() {
         addLog('WebSocket Connected', 'success');
       });
 
-      ua.value.on('disconnected', () => {
+      ua.value.on('disconnected', (data: any) => {
         state.isConnected = false;
         state.isRegistered = false;
-        addLog('WebSocket Disconnected', 'error');
+        stopAll();
+        const reason = data?.error ? ` (Error: ${data.error})` : '';
+        addLog(`WebSocket Disconnected${reason}`, 'error');
+        console.error('SIP Disconnected:', data);
       });
 
       ua.value.on('registered', () => {
@@ -73,7 +102,9 @@ export function useSIP() {
       ua.value.on('registrationFailed', (data: any) => {
         state.isRegistered = false;
         state.registrationError = data.cause;
-        addLog(`Registration Failed: ${data.cause}`, 'error');
+        const extra = data.response ? ` | Status: ${data.response.status_code}` : '';
+        addLog(`Registration Failed: ${data.cause}${extra}`, 'error');
+        console.error('SIP Registration Failed:', data);
       });
 
       ua.value.on('newRTCSession', (data: { session: any; originator: string }) => {
@@ -86,27 +117,116 @@ export function useSIP() {
           isIncoming: data.originator === 'remote'
         };
 
-        newSession.on('peerconnection', (pcData: { peerconnection: RTCPeerConnection }) => {
-          pcData.peerconnection.ontrack = (event: RTCTrackEvent) => {
+        const handlePC = (pc: RTCPeerConnection) => {
+          if ((pc as any)._captured) return;
+          (pc as any)._captured = true;
+          
+          addLog('WebRTC PeerConnection Active', 'success');
+
+          pc.ontrack = (event: RTCTrackEvent) => {
+            addLog(`Remote track received: ${event.track.kind}`, 'info');
             if (state.currentCall) {
-              state.currentCall.remoteStream = event.streams[0];
+              let stream = state.currentCall.remoteStream;
+              if (!stream || !(stream instanceof MediaStream)) stream = new MediaStream();
+              stream.addTrack(event.track);
+              state.currentCall.remoteStream = markRaw(stream);
+              addLog(`Track Attached & Active`, 'success');
             }
           };
+
+          pc.onicecandidate = (event) => {
+            if (event.candidate) {
+              if (!state.logs.some(l => l.msg.includes('Candidates gathering'))) {
+                addLog('ICE Candidates gathering...', 'info');
+              }
+            }
+          };
+
+          pc.oniceconnectionstatechange = () => {
+            const state_str = pc.iceConnectionState;
+            if (state.currentCall) {
+              if (state_str === 'connected' || state_str === 'completed') {
+                state.currentCall.status = 'In Call';
+              } else if (state_str === 'failed') {
+                state.currentCall.status = 'Media Gap';
+                addLog('ICE Failed. Check UDP Ports 10000-20000.', 'error');
+              } else {
+                state.currentCall.status = 'Establishing Media...';
+              }
+            }
+          };
+        };
+
+        // Aggressive PC capture: Check if it already exists or wait for it
+        if (newSession.connection) {
+          handlePC(newSession.connection);
+        }
+        newSession.on('peerconnection', (pcData: { peerconnection: RTCPeerConnection }) => {
+          handlePC(pcData.peerconnection);
         });
 
-        newSession.on('connecting', () => addLog('Call Connecting...'));
+        newSession.on('sdp', (data: { sdp: string; originator: string; type: string }) => {
+          const hasIce = data.sdp.includes('ice-pwd');
+          const hasDtls = data.sdp.includes('fingerprint');
+          console.log(`SDP ${data.type} hasIce:${hasIce} hasDtls:${hasDtls}`);
+          addLog(`SDP ${data.type}: ICE=${hasIce ? 'OK' : 'MISSING'} DTLS=${hasDtls ? 'OK' : 'MISSING'}`, 'info');
+        });
+
+        // Additional fallback for stream events
+        newSession.on('addstream', (e: any) => {
+          console.log('Legacy addstream event:', e.stream.id);
+          if (state.currentCall && !state.currentCall.remoteStream) {
+            state.currentCall.remoteStream = markRaw(e.stream);
+            addLog('Stream Added (Legacy)', 'success');
+          }
+        });
+
+        newSession.on('track', (e: any) => {
+          console.log('Session track event:', e.track.kind);
+          if (state.currentCall && e.track.kind === 'audio') {
+            if (!state.currentCall.remoteStream) {
+              state.currentCall.remoteStream = markRaw(new MediaStream());
+            }
+            state.currentCall.remoteStream.addTrack(e.track);
+          }
+        });
+
+        newSession.on('connecting', () => {
+          if (state.currentCall) state.currentCall.status = 'Connecting...';
+          addLog('Call Connecting...');
+        });
+
+        newSession.on('progress', () => {
+          if (state.currentCall) state.currentCall.status = 'Ringing...';
+          addLog('Call Progress/Ringing...');
+        });
+
         newSession.on('accepted', () => {
-          if (state.currentCall) state.currentCall.status = 'In Call';
+          stopAll();
+          if (state.currentCall && !state.currentCall.status.includes('ICE')) {
+            state.currentCall.status = 'In Call';
+          }
           addLog('Call Accepted', 'success');
+        });
+
+        newSession.on('confirmed', () => {
+          stopAll();
+          if (state.currentCall && !state.currentCall.status.includes('ICE')) {
+            state.currentCall.status = 'In Call';
+          }
+          addLog('Call Live', 'success');
         });
         
         newSession.on('failed', (e: any) => {
+          stopAll();
+          playBusyTone();
           state.currentCall = null;
           session.value = null;
           addLog(`Call Failed: ${e.cause}`, 'error');
         });
 
         newSession.on('ended', () => {
+          stopAll();
           state.currentCall = null;
           session.value = null;
           addLog('Call Ended');
@@ -122,31 +242,60 @@ export function useSIP() {
   const disconnect = () => {
     if (ua.value) {
       ua.value.stop();
+      stopAll();
     }
   };
+
+  // High-fidelity Audio Constraints (from InnovateAsterisk)
+  const audioConstraints = true;
 
   const makeCall = (target: string) => {
     if (!ua.value || !state.isRegistered) {
       addLog('Cannot call: Not registered', 'error');
       return;
     }
+
+    // Extract domain from UA configuration for consistency
+    const domain = (ua.value.configuration.uri as any).host;
+
+    // Check Browser Secure Context & Media Capabilities
+    if (!window.isSecureContext) {
+      addLog('Insecure Context: WebRTC is disabled by browser. Use localhost or HTTPS.', 'error');
+    }
+    
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      addLog('MediaDevices API not available. Check browser permissions.', 'error');
+    }
+
+    addLog(`Initiating call to ${target}...`);
+    
     const options = {
-      mediaConstraints: { audio: true, video: false },
-      rtcOfferConstraints: { offerToReceiveAudio: true, offerToReceiveVideo: false }
+      mediaConstraints: { audio: audioConstraints, video: false },
+      pcConfig: ua.value.configuration.pcConfig,
+      rtcConstraints: { 'optional': [{ 'DtlsSrtpKeyAgreement': 'true' }] }
     };
-    ua.value.call(`sip:${target}@127.0.0.1`, options);
+
+    try {
+      const outgoingSession = ua.value.call(`sip:${target}@${domain}`, options);
+      addLog('SDP Offer generated', 'info');
+    } catch (e: any) {
+      addLog(`Failed to create call: ${e.message}`, 'error');
+      console.error('JsSIP call error:', e);
+    }
   };
 
   const terminateCall = () => {
     if (session.value) {
       session.value.terminate();
+      stopAll();
     }
   };
 
   const answerCall = () => {
     if (session.value && state.currentCall?.isIncoming) {
+      stopAll();
       session.value.answer({
-        mediaConstraints: { audio: true, video: false }
+        mediaConstraints: { audio: audioConstraints, video: false }
       });
     }
   };

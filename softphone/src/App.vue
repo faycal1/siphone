@@ -51,14 +51,18 @@ const updateConfig = (newConfig: any) => {
 // Admin Monitoring Logic
 const { stats, startMonitoring, stopMonitoring } = useAdmin();
 
+const isLocalhost = (ip: string) => {
+  return ip === 'localhost' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip.startsWith('10.');
+};
+
 onMounted(() => {
-  if (serverIp.value) {
+  if (serverIp.value && isLocalhost(serverIp.value)) {
     startMonitoring(serverIp.value);
   }
 });
 
 watch(serverIp, (newIp) => {
-  if (newIp) {
+  if (newIp && isLocalhost(newIp)) {
     startMonitoring(newIp);
   } else {
     stopMonitoring();
