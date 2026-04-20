@@ -59,6 +59,15 @@ python3 config-api/server.py
 ```
 The API will run on: **[http://localhost:5000/](http://localhost:5000/)**
 
+### 4. Configure External Connections (Optional)
+To use the **CSC360 Demo** preset or other remote servers, you must set up your environment variables.
+# Edit .env and configured your remote credentials:
+VITE_REMOTE_WS_URL=wss://demo.cscall360.com:8089/ws
+VITE_REMOTE_EXTENSION=100100
+VITE_REMOTE_PASSWORD=your_secure_password
+```
+*(Note: Secure WebSockets (WSS) are required for all remote connections).*
+
 ---
 
 ## ⚙️ Configuration
@@ -85,6 +94,32 @@ If you want to add new dialable numbers manually:
 1. Open `config/extensions.conf` and scroll to the bottom to the `[internal]` block.
 2. Add your routing rule, for example: `exten => 103,1,Dial(PJSIP/103,30)`
 3. Reload the Asterisk dialplan: `docker exec asterisk asterisk -rx "dialplan reload"`
+
+---
+
+## 🌍 External & Demo Presets
+
+The softphone supports two primary operational modes:
+
+### 1. Local Dev
+- **Goal**: Full technical transparency.
+- **Logging**: Displays high-fidelity debug info including **ICE gathering** and **SDP handshakes**.
+- **Server**: Targets your local Dockerized Asterisk instance.
+
+### 2. CSC360 Demo
+- **Goal**: Professional, clean presentation.
+- **Logging**: Automatically filters out technical noise, showing only business-critical events (Call Live, Accepted, Ended).
+- **Server**: Targets the remote demo platform via secure environment variables.
+
+---
+
+## 🔊 Audio Reliability & Warming
+
+To bypass strict browser autoplay policies and ensure 100% audio reliability (especially for auto-answering extensions like `600`):
+
+1. **The "Connect" Phase**: When you click the **Connect** button, the app automatically "warms up" the audio engine and requests microphone permissions early. 
+2. **Auto-Unlocking**: This interaction satisfies the browser's security requirements, ensuring that incoming media is never blocked.
+3. **Manual Override**: If audio fails due to network jitter, use the **"Force Audio Start"** button in the Call HUD to manually kickstart the stream.
 
 ---
 
@@ -165,6 +200,12 @@ The softphone includes a functional Dial Pad for sending dial tones (DTMF) durin
   Look for `INFO` packets containing `Signal=X`.
 
 ---
+
+## 🛠️ Connectivity & NAT Traversal
+For external connections, the softphone is pre-configured with Google STUN servers in `useSIP.ts` to ensure flawless ICE negotiation across various network firewalls. 
+
+- **STUN Server**: `stun:stun.l.google.com:19302`
+- **Port Handling**: Ensure UDP ports `10000-20000` are open if monitoring a local server behind a firewall.
 
 ## 🛡️ Security Note
 The current environment uses `dtls_verify=no` for local development. For production deployments, ensure you replace the certificates in `config/` with trusted CA-signed certificates and update your PJSIP configuration.
