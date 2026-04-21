@@ -73,7 +73,7 @@ export function useAdmin() {
     const apiKey = `${user}:${pass}`;
 
     const wsUrl = `${protocol}://${baseIp}:${port}/ari/events?api_key=${apiKey}&app=softphone_monitor&subscribeAll=true`;
-    console.log(`[ARI] Attempting connection to: ${wsUrl}`);
+    //console.log(`[ARI] Attempting connection to: ${wsUrl}`);
 
     try {
       socket = new WebSocket(wsUrl);
