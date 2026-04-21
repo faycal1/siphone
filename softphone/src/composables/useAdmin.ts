@@ -21,8 +21,8 @@ export function useAdmin() {
     const protocol = isSecure ? 'https' : 'http';
     const baseUrl = `${protocol}://${baseIp}:${port}/ari`;
 
-    const user = import.meta.env.VITE_ARI_USER || 'callme';
-    const pass = import.meta.env.VITE_ARI_PASS || 'callme';
+    const user = isRemote ? (import.meta.env.VITE_ARI_USER || 'callme') : 'admin';
+    const pass = isRemote ? (import.meta.env.VITE_ARI_PASS || 'callme') : 'adminpass';
     const apiKey = `${user}:${pass}`;
 
     try {
@@ -61,8 +61,8 @@ export function useAdmin() {
     const protocol = isSecure ? 'wss' : 'ws';
     const port = isSecure ? '8089' : '8088';
     
-    const user = import.meta.env.VITE_ARI_USER || 'callme';
-    const pass = import.meta.env.VITE_ARI_PASS || 'callme';
+    const user = isRemote ? (import.meta.env.VITE_ARI_USER || 'callme') : 'admin';
+    const pass = isRemote ? (import.meta.env.VITE_ARI_PASS || 'callme') : 'adminpass';
     const apiKey = `${user}:${pass}`;
     
     const wsUrl = `${protocol}://${baseIp}:${port}/ari/events?api_key=${apiKey}&app=softphone_monitor&subscribeAll=true`;
