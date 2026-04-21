@@ -29,7 +29,7 @@ export function useAdmin() {
       const [channelsRes, endpointsRes, registrationsRes] = await Promise.all([
         fetch(`${baseUrl}/channels?api_key=${apiKey}`),
         fetch(`${baseUrl}/endpoints?api_key=${apiKey}`),
-        fetch(`http://${baseIp}:5000/registrations`).catch(() => null)
+        !isRemote ? fetch(`${protocol}://${baseIp}:5000/registrations`).catch(() => null) : Promise.resolve(null)
       ]);
 
       if (!channelsRes.ok || !endpointsRes.ok) {
