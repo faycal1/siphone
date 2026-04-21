@@ -7,13 +7,22 @@ const props = defineProps<{
     wsUrl: string;
     extension: string;
     password: string;
+    turnUrl?: string;
+    turnUser?: string;
+    turnPass?: string;
   }
 }>();
 
 const emit = defineEmits(['update', 'close']);
 
-const localConfig = ref({ ...props.config });
+const localConfig = ref({ 
+  turnUrl: '',
+  turnUser: '',
+  turnPass: '',
+  ...props.config 
+});
 const showPassword = ref(false);
+const showAdvanced = ref(false);
 
 // Presets Definition
 const presets = [
@@ -27,7 +36,10 @@ const presets = [
     name: 'CSC360 Demo',
     wsUrl: import.meta.env.VITE_REMOTE_WS_URL ,
     extension: import.meta.env.VITE_REMOTE_EXTENSION ,
-    password: import.meta.env.VITE_REMOTE_PASSWORD 
+    password: import.meta.env.VITE_REMOTE_PASSWORD,
+    turnUrl: '',
+    turnUser: '',
+    turnPass: ''
   }
 ];
 
@@ -128,6 +140,55 @@ const handleSave = () => {
             />
           </div>
           <span class="text-[8px] text-[var(--text-muted)] uppercase tracking-tighter ml-1 font-mono">Full WS/WSS Endpoint Path</span>
+        </div>
+
+        <!-- Advanced Toggle -->
+        <div class="flex flex-col gap-4">
+          <button 
+            @click="showAdvanced = !showAdvanced"
+            class="flex items-center justify-between px-1 py-1 group"
+          >
+            <span class="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)] group-hover:text-primary transition-colors">Advanced Settings</span>
+            <div class="h-[1px] flex-1 mx-4 bg-[var(--border-main)] opacity-50"></div>
+            <Settings class="w-3 h-3 text-[var(--text-muted)] group-hover:rotate-45 transition-all" />
+          </button>
+
+          <div v-if="showAdvanced" class="flex flex-col gap-5 animate-fade-in">
+            <!-- TURN URL -->
+            <div class="flex flex-col gap-2">
+              <label class="text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)] ml-1">TURN Relay (Optional)</label>
+              <input 
+                v-model="localConfig.turnUrl"
+                type="text" 
+                placeholder="turn:your-server.com:3478"
+                class="w-full bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl py-3 px-4 text-xs text-[var(--text-main)] outline-none focus:border-primary/50 transition-all font-mono"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <!-- TURN User -->
+              <div class="flex flex-col gap-2">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)] ml-1">Relay User</label>
+                <input 
+                  v-model="localConfig.turnUser"
+                  type="text" 
+                  placeholder="user"
+                  class="w-full bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl py-3 px-4 text-xs text-[var(--text-main)] outline-none focus:border-primary/50 transition-all"
+                />
+              </div>
+              <!-- TURN Password -->
+              <div class="flex flex-col gap-2">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)] ml-1">Relay Key</label>
+                <input 
+                  v-model="localConfig.turnPass"
+                  type="password" 
+                  placeholder="••••"
+                  class="w-full bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl py-3 px-4 text-xs text-[var(--text-main)] outline-none focus:border-primary/50 transition-all"
+                />
+              </div>
+            </div>
+            <span class="text-[8px] text-[var(--text-muted)] italic leading-relaxed px-1">Use TURN if calls connect but have no audio on remote networks.</span>
+          </div>
         </div>
 
         <!-- Persuasion / Save Button -->
