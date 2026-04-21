@@ -25,9 +25,9 @@ const presets = [
   },
   {
     name: 'CSC360 Demo',
-    wsUrl: import.meta.env.VITE_REMOTE_WS_URL || 'wss://demo.cscall360.com:8089/ws',
-    extension: import.meta.env.VITE_REMOTE_EXTENSION || '100100',
-    password: import.meta.env.VITE_REMOTE_PASSWORD || 'mlsdskys143shjdjh'
+    wsUrl: import.meta.env.VITE_REMOTE_WS_URL ,
+    extension: import.meta.env.VITE_REMOTE_EXTENSION ,
+    password: import.meta.env.VITE_REMOTE_PASSWORD 
   }
 ];
 
