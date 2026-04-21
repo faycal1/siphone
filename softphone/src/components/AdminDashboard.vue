@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { Activity, Users, Globe, RefreshCw, AlertCircle, Plus } from 'lucide-vue-next';
 import { useAdmin } from '../composables/useAdmin';
-import { onMounted, watch, ref } from 'vue';
+import { onMounted, watch, ref, computed } from 'vue';
 
 const props = defineProps<{
   serverIp: string;
 }>();
 
 const { stats, startMonitoring, stopMonitoring } = useAdmin();
+
+const isRemote = computed(() => {
+  return props.serverIp !== 'localhost' && !props.serverIp.startsWith('127.');
+});
 
 onMounted(() => {
   if (props.serverIp) {
@@ -71,37 +75,37 @@ const handleAddExtension = async () => {
 <template>
   <div class="flex flex-col gap-6 h-full overflow-hidden">
     
-    <!-- Extension Management PoC -->
-    <div class="glass p-5 rounded-3xl border-white/5 bg-white/[0.02] flex flex-col gap-4">
+    <!-- Extension Management PoC (HIDDEN IN REMOTE MODE) -->
+    <div v-if="!isRemote" class="glass p-5 rounded-3xl border-[var(--border-main)] bg-card flex flex-col gap-4">
       <div class="flex items-center gap-2 px-1">
         <Plus class="w-4 h-4 text-accent" />
-        <span class="text-[10px] font-black uppercase tracking-widest text-white/50">Add New Member</span>
+        <span class="text-[10px] font-black uppercase tracking-widest text-text-muted">Add New Member</span>
       </div>
       
       <div class="grid grid-cols-3 gap-3">
         <div class="flex flex-col gap-1.5">
-          <label class="text-[8px] font-black uppercase tracking-widest text-white/20 px-1">Extension</label>
+          <label class="text-[8px] font-black uppercase tracking-widest text-text-muted px-1">Extension</label>
           <input 
             v-model="newExt" 
             placeholder="e.g. 103" 
-            class="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-accent/40 outline-none transition-all"
+            class="bg-card border border-[var(--border-main)] rounded-xl px-3 py-2 text-xs text-text focus:border-accent/40 outline-none transition-all"
           />
         </div>
         <div class="flex flex-col gap-1.5">
-          <label class="text-[8px] font-black uppercase tracking-widest text-white/20 px-1">Password</label>
+          <label class="text-[8px] font-black uppercase tracking-widest text-text-muted px-1">Password</label>
           <input 
             v-model="newPass" 
             type="password"
             placeholder="••••••••" 
-            class="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-accent/40 outline-none transition-all"
+            class="bg-card border border-[var(--border-main)] rounded-xl px-3 py-2 text-xs text-text focus:border-accent/40 outline-none transition-all"
           />
         </div>
         <div class="flex flex-col gap-1.5">
-          <label class="text-[8px] font-black uppercase tracking-widest text-white/20 px-1">Full Name</label>
+          <label class="text-[8px] font-black uppercase tracking-widest text-text-muted px-1">Full Name</label>
           <input 
             v-model="newName" 
             placeholder="John Doe" 
-            class="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-accent/40 outline-none transition-all"
+            class="bg-card border border-[var(--border-main)] rounded-xl px-3 py-2 text-xs text-text focus:border-accent/40 outline-none transition-all"
           />
         </div>
       </div>
@@ -110,7 +114,7 @@ const handleAddExtension = async () => {
         <div v-if="statusMsg.text" :class="[
           'text-[9px] font-bold px-3 py-1 rounded-full',
           statusMsg.type === 'success' ? 'text-accent bg-accent/10' : 
-          statusMsg.type === 'error' ? 'text-rose-500 bg-rose-500/10' : 'text-white/40 bg-white/5'
+          statusMsg.type === 'error' ? 'text-rose-500 bg-rose-500/10' : 'text-text-muted bg-card'
         ]">
           {{ statusMsg.text }}
         </div>
@@ -130,29 +134,29 @@ const handleAddExtension = async () => {
 
     <!-- Stats Overview Cards -->
     <div class="grid grid-cols-3 gap-4">
-      <div class="glass p-4 rounded-3xl border-white/5 bg-white/[0.02] flex flex-col gap-1 transition-all hover:bg-white/[0.05]">
+      <div class="glass p-4 rounded-3xl border-[var(--border-main)] bg-card flex flex-col gap-1 transition-all hover:bg-[var(--bg-glass-hover)]">
         <div class="flex items-center justify-between mb-1">
           <Activity class="w-4 h-4 text-accent" />
           <span v-if="stats.isOnline" class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
         </div>
-        <span class="text-[20px] font-black text-white px-1">{{ stats.channels.length }}</span>
-        <span class="text-[9px] font-black uppercase tracking-widest text-white/30 px-1">Active Calls</span>
+        <span class="text-[20px] font-black text-text px-1">{{ stats.channels.length }}</span>
+        <span class="text-[9px] font-black uppercase tracking-widest text-text-muted px-1">Active Calls</span>
       </div>
 
-      <div class="glass p-4 rounded-3xl border-white/5 bg-white/[0.02] flex flex-col gap-1 transition-all hover:bg-white/[0.05]">
+      <div class="glass p-4 rounded-3xl border-[var(--border-main)] bg-card flex flex-col gap-1 transition-all hover:bg-[var(--bg-glass-hover)]">
         <div class="flex items-center justify-between mb-1">
           <Users class="w-4 h-4 text-primary" />
         </div>
-        <span class="text-[20px] font-black text-white px-1">{{ stats.endpoints.length }}</span>
-        <span class="text-[9px] font-black uppercase tracking-widest text-white/30 px-1">Endpoints</span>
+        <span class="text-[20px] font-black text-text px-1">{{ stats.endpoints.length }}</span>
+        <span class="text-[9px] font-black uppercase tracking-widest text-text-muted px-1">Endpoints</span>
       </div>
 
-      <div class="glass p-4 rounded-3xl border-white/5 bg-white/[0.02] flex flex-col gap-1 transition-all hover:bg-white/[0.05]">
+      <div class="glass p-4 rounded-3xl border-[var(--border-main)] bg-card flex flex-col gap-1 transition-all hover:bg-[var(--bg-glass-hover)]">
         <div class="flex items-center justify-between mb-1">
           <Globe class="w-4 h-4 text-indigo-400" />
         </div>
-        <span class="text-[20px] font-black text-white px-1">{{ stats.registrations.length }}</span>
-        <span class="text-[9px] font-black uppercase tracking-widest text-white/30 px-1">Trunk Regs</span>
+        <span class="text-[20px] font-black text-text px-1">{{ stats.registrations.length }}</span>
+        <span class="text-[9px] font-black uppercase tracking-widest text-text-muted px-1">Trunk Regs</span>
       </div>
     </div>
 
@@ -164,30 +168,30 @@ const handleAddExtension = async () => {
         <div class="flex items-center justify-between px-2">
           <div class="flex items-center gap-2">
             <Activity class="w-3.5 h-3.5 text-accent" />
-            <span class="text-[10px] font-black uppercase tracking-widest text-white/50">Live Channels</span>
+            <span class="text-[10px] font-black uppercase tracking-widest text-text-muted">Live Channels</span>
           </div>
-          <RefreshCw class="w-3 h-3 text-white/20 animate-spin-slow" />
+          <RefreshCw class="w-3 h-3 text-text-muted animate-spin-slow" />
         </div>
 
         <div class="flex-1 overflow-y-auto scrollbar-none pr-1">
-          <div v-if="stats.channels.length === 0" class="flex flex-col items-center justify-center py-8 opacity-20 border border-dashed border-white/10 rounded-2xl gap-3">
-            <Activity class="w-8 h-8" />
-            <span class="text-[9px] font-black uppercase tracking-widest">No Active Traffic</span>
+          <div v-if="stats.channels.length === 0" class="flex flex-col items-center justify-center py-8 opacity-20 border border-dashed border-[var(--border-main)] rounded-2xl gap-3">
+            <Activity class="w-8 h-8 text-text" />
+            <span class="text-[9px] font-black uppercase tracking-widest text-text">No Active Traffic</span>
           </div>
 
           <div class="flex flex-col gap-2">
             <div 
               v-for="ch in stats.channels" 
               :key="ch.id"
-              class="group flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.06] transition-all"
+              class="group flex items-center justify-between p-3.5 rounded-2xl bg-card border border-[var(--border-main)] hover:bg-[var(--bg-glass-hover)] transition-all"
             >
               <div class="flex items-center gap-4">
                 <div class="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center border border-accent/20">
                   <Activity class="w-4 h-4 text-accent" />
                 </div>
                 <div class="flex flex-col">
-                  <span class="text-xs font-bold text-white tracking-tight">{{ ch.caller.name || 'Unknown' }} ({{ ch.caller.number }})</span>
-                  <span class="text-[9px] font-medium text-white/30 uppercase tracking-tighter">{{ ch.state }} — {{ ch.name }}</span>
+                  <span class="text-xs font-bold text-text tracking-tight">{{ ch.caller.name || 'Unknown' }} ({{ ch.caller.number }})</span>
+                  <span class="text-[9px] font-medium text-text-muted uppercase tracking-tighter">{{ ch.state }} — {{ ch.name }}</span>
                 </div>
               </div>
               <div class="px-2.5 py-1 rounded-full bg-accent/10 border border-accent/20">
@@ -202,7 +206,7 @@ const handleAddExtension = async () => {
       <div class="flex flex-col gap-3 min-h-0">
         <div class="flex items-center gap-2 px-2">
           <Users class="w-3.5 h-3.5 text-primary" />
-          <span class="text-[10px] font-black uppercase tracking-widest text-white/50">Endpoint Health</span>
+          <span class="text-[10px] font-black uppercase tracking-widest text-text-muted">Endpoint Health</span>
         </div>
 
         <div class="flex-1 overflow-y-auto scrollbar-none pr-1">
@@ -210,16 +214,16 @@ const handleAddExtension = async () => {
             <div 
               v-for="ep in stats.endpoints" 
               :key="ep.resource"
-              class="flex items-center justify-between p-3 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all"
+              class="flex items-center justify-between p-3 rounded-2xl bg-card border border-[var(--border-main)] hover:bg-[var(--bg-glass-hover)] transition-all"
             >
               <div class="flex items-center gap-3">
                 <div :class="[
                   'w-2 h-2 rounded-full',
                   ep.state === 'online' ? 'bg-accent shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'
                 ]"></div>
-                <span class="text-xs font-bold text-white/80 tracking-tight">{{ ep.resource }}</span>
+                <span class="text-xs font-bold text-text-muted tracking-tight">{{ ep.resource }}</span>
               </div>
-              <span class="text-[9px] font-black text-white/20 uppercase tracking-tighter">{{ ep.technology }}</span>
+              <span class="text-[9px] font-black text-text-muted uppercase tracking-tighter">{{ ep.technology }}</span>
             </div>
           </div>
         </div>
@@ -231,7 +235,7 @@ const handleAddExtension = async () => {
     <div v-if="stats.error" class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3 animate-pulse">
       <AlertCircle class="w-4 h-4 text-rose-500 shrink-0" />
       <div class="flex flex-col">
-        <span class="text-[10px] font-black uppercase tracking-widest text-white">API Connection Failed</span>
+        <span class="text-[10px] font-black uppercase tracking-widest text-text">API Connection Failed</span>
         <span class="text-[8px] font-medium text-rose-400 capitalize">{{ stats.error }}</span>
       </div>
     </div>

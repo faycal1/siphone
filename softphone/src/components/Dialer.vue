@@ -22,41 +22,44 @@ const backspace = () => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-10 py-4 h-full relative overflow-hidden">
+  <div class="flex flex-col h-full relative overflow-hidden py-2">
     <!-- Dial Display Section -->
-    <div class="flex flex-col items-center gap-2 relative z-10">
-      <div class="flex items-center gap-2 transition-all duration-300 transform scale-110 active:scale-105">
+    <div class="flex flex-col items-center justify-center min-h-[140px] relative z-0">
+      <div class="w-full text-center">
         <input 
           v-model="dialTarget"
           type="text" 
           placeholder="Enter Number" 
           autofocus
-          class="w-full bg-transparent border-none text-center text-5xl font-light tracking-tight placeholder:text-white/10 focus:ring-0 text-white selection:bg-primary/20"
+          class="w-full bg-transparent border-none text-center text-4xl font-light tracking-tight placeholder:text-text-muted focus:ring-0 focus:outline-none outline-none text-text transition-all duration-300"
+          :class="{ 'scale-75 opacity-50': !dialTarget }"
         />
       </div>
-      <div v-if="dialTarget.length > 0" class="flex gap-4">
+      
+      <!-- Secondary Controls: Absolute to prevent shifting -->
+      <div class="flex gap-4 mt-4 transition-all duration-300 h-10 items-center" :class="{ 'opacity-0 pointer-events-none scale-90': !dialTarget }">
         <button 
           @click="backspace" 
-          class="p-2.5 rounded-full bg-white/[0.05] hover:bg-white/10 text-white/40 transition-colors"
+          class="p-2.5 rounded-full bg-card hover:bg-[var(--bg-glass-hover)] text-text-muted hover:text-text transition-colors"
           title="Clear"
         >
           <Delete class="w-4 h-4" />
         </button>
-        <button class="p-2.5 rounded-full bg-white/[0.03] text-white/20 hover:text-white/40 transition-colors">
+        <button class="p-2.5 rounded-full bg-card text-text-muted hover:text-text hover:bg-[var(--bg-glass-hover)] transition-colors">
           <History class="w-4 h-4" />
         </button>
       </div>
     </div>
 
     <!-- Keypad Grid - Premium Neumorphic Glass -->
-    <div class="grid grid-cols-3 gap-x-12 gap-y-8 px-4 justify-items-center">
+    <div class="grid grid-cols-3 gap-x-12 gap-y-6 px-4 justify-items-center relative z-20 mt-4">
       <button v-for="num in ['1','2','3','4','5','6','7','8','9','*','0','#']" 
               :key="num" 
               @click="handleKeypadPress(num)"
-              class="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-light bg-white/[0.03] border border-white/5 shadow-inner transition-all duration-300 hover:bg-white/10 hover:border-white/10 active:bg-primary/20 focus:outline-none focus:ring-0 relative group"
+              class="dialer-btn bg-card text-text group hover:border-primary/30 hover:text-primary hover:scale-105"
       >
-        <span class="relative z-10 group-active:scale-125 transition-transform">{{ num }}</span>
-        <div class="absolute inset-0 rounded-full bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <span class="relative z-10 group-active:scale-125 transition-transform pointer-events-none">{{ num }}</span>
+        <div class="absolute inset-0 rounded-full bg-[var(--bg-glass-hover)] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
       </button>
     </div>
 
@@ -75,4 +78,22 @@ const backspace = () => {
 
 <style scoped>
 @reference "tailwindcss";
+
+.dialer-btn {
+  @apply relative w-[72px] h-[72px] rounded-full flex items-center justify-center text-3xl font-light
+         border border-[var(--border-main)] backdrop-blur-md shadow-lg shadow-black/10
+         transition-all duration-300 overflow-hidden active:scale-95;
+}
+
+.dialer-btn:hover {
+  @apply bg-[var(--bg-glass-hover)];
+}
+
+.dialer-btn span {
+  @apply relative z-10 transition-transform duration-300;
+}
+
+.dialer-btn:active span {
+  @apply scale-125;
+}
 </style>

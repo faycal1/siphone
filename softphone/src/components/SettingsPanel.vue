@@ -42,34 +42,34 @@ const handleSave = () => {
 </script>
 
 <template>
-  <div class="absolute inset-0 z-50 flex items-center justify-center p-8 bg-black/40 backdrop-blur-sm transition-all duration-500">
-    <div class="glass w-full max-w-[380px] rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border-white/10 animate-fade-in-scale">
+  <div class="absolute inset-0 z-50 flex items-center justify-center p-8 bg-black/60 backdrop-blur-[2px] transition-all duration-500">
+    <div class="glass w-full max-w-[380px] rounded-[2.5rem] overflow-hidden flex flex-col shadow-[0_30px_100px_rgba(0,0,0,0.4)] border border-[var(--border-main)] animate-fade-in-scale bg-[var(--bg-main)]">
       
       <!-- Header -->
-      <div class="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+      <div class="px-8 py-6 border-b border-[var(--border-main)] bg-[var(--bg-card)] flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="p-2 rounded-lg bg-primary/10 border border-primary/20">
             <Settings class="w-4 h-4 text-primary" />
           </div>
-          <span class="text-sm font-black uppercase tracking-[0.2em] text-white/90">SIP Config</span>
+          <span class="text-sm font-black uppercase tracking-[0.2em] text-[var(--text-main)]">SIP Config</span>
         </div>
-        <button @click="emit('close')" class="p-2 rounded-full hover:bg-white/5 text-white/20 hover:text-white/80 transition-all">
+        <button @click="emit('close')" class="p-2 rounded-full hover:bg-[var(--bg-glass-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all">
           <X class="w-4 h-4" />
         </button>
       </div>
 
       <!-- Presets Section -->
       <div class="px-8 pt-6">
-        <label class="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 mb-3 block">Quick Presets</label>
+        <label class="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1 mb-3 block">Quick Presets</label>
         <div class="grid grid-cols-2 gap-3">
           <button 
             v-for="preset in presets" 
             :key="preset.name"
             @click="applyPreset(preset)"
-            class="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10 transition-all group"
+            class="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-glass-hover)] transition-all group"
           >
-            <span class="text-[10px] font-bold text-white/60 group-hover:text-white transition-colors">{{ preset.name }}</span>
-            <span class="text-[7px] text-white/20 tracking-tighter truncate w-full text-center">{{ preset.wsUrl }}</span>
+            <span class="text-[10px] font-bold text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition-colors">{{ preset.name }}</span>
+            <span class="text-[7px] text-[var(--text-muted)] tracking-tighter truncate w-full text-center">{{ preset.wsUrl }}</span>
           </button>
         </div>
       </div>
@@ -80,33 +80,33 @@ const handleSave = () => {
         <div class="grid grid-cols-2 gap-4">
           <!-- Extension Field -->
           <div class="flex flex-col gap-2">
-            <label class="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Extension</label>
+            <label class="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Extension</label>
             <div class="relative group">
-              <User class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
+              <User class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] group-focus-within:text-primary transition-colors" />
               <input 
                 v-model="localConfig.extension"
                 type="text" 
                 placeholder="100"
-                class="w-full bg-white/[0.03] border border-white/10 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white font-medium outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/10"
+                class="w-full bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl py-3.5 pl-12 pr-4 text-sm text-[var(--text-main)] font-medium outline-none focus:border-primary/50 focus:bg-[var(--bg-glass-hover)] transition-all placeholder:text-[var(--text-muted)]"
               />
             </div>
           </div>
 
           <!-- Password Field -->
           <div class="flex flex-col gap-2">
-            <label class="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Secret</label>
+            <label class="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Secret</label>
             <div class="relative group">
-              <Lock class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
+              <Lock class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] group-focus-within:text-primary transition-colors" />
               <input 
                 v-model="localConfig.password"
                 :type="showPassword ? 'text' : 'password'" 
                 placeholder="••••"
-                class="w-full bg-white/[0.03] border border-white/10 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white font-medium outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/10"
+                class="w-full bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl py-3.5 pl-12 pr-12 text-sm text-[var(--text-main)] font-medium outline-none focus:border-primary/50 focus:bg-[var(--bg-glass-hover)] transition-all placeholder:text-[var(--text-muted)]"
               />
               <button 
                 type="button"
                 @click="showPassword = !showPassword"
-                class="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/40 transition-colors"
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
               >
                 <Eye v-if="!showPassword" class="w-4 h-4" />
                 <EyeOff v-else class="w-4 h-4" />
@@ -117,17 +117,17 @@ const handleSave = () => {
 
         <!-- WebSocket URL Field -->
         <div class="flex flex-col gap-2">
-          <label class="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">WebSocket URL</label>
+          <label class="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">WebSocket URL</label>
           <div class="relative group">
-            <Globe class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
+            <Globe class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] group-focus-within:text-primary transition-colors" />
             <input 
               v-model="localConfig.wsUrl"
               type="text" 
               placeholder="ws://...:8088/ws"
-              class="w-full bg-white/[0.03] border border-white/10 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white font-medium outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/10"
+              class="w-full bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl py-3.5 pl-12 pr-4 text-sm text-[var(--text-main)] font-medium outline-none focus:border-primary/50 focus:bg-[var(--bg-glass-hover)] transition-all placeholder:text-[var(--text-muted)]"
             />
           </div>
-          <span class="text-[8px] text-white/20 uppercase tracking-tighter ml-1 font-mono">Full WS/WSS Endpoint Path</span>
+          <span class="text-[8px] text-[var(--text-muted)] uppercase tracking-tighter ml-1 font-mono">Full WS/WSS Endpoint Path</span>
         </div>
 
         <!-- Persuasion / Save Button -->

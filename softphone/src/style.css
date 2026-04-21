@@ -1,31 +1,68 @@
 @import "tailwindcss";
 
+:root {
+  /* Default Dark Mode (Electric Night) */
+  --bg-main: #0B0F19;
+  --bg-card: rgba(255, 255, 255, 0.04);
+  --bg-glass-hover: rgba(255, 255, 255, 0.08);
+  --border-main: rgba(255, 255, 255, 0.1);
+  --text-main: #FFFFFF;
+  --text-muted: rgba(255, 255, 255, 0.5);
+  --shadow-color: rgba(0, 0, 0, 0.6);
+  
+  --primary: #6366f1;
+  --primary-glow: rgba(99, 102, 241, 0.4);
+  --accent: #10B981;
+  --accent-hover: #059669;
+  --danger: #F43F5E;
+}
+
+:root.light-mode {
+  /* High-Contrast Light Mode (Frosted Day) */
+  --bg-main: #F1F5F9;
+  --bg-card: rgba(0, 0, 0, 0.02);
+  --bg-glass-hover: rgba(0, 0, 0, 0.05);
+  --border-main: rgba(0, 0, 0, 0.08);
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --shadow-color: rgba(15, 23, 42, 0.08);
+  
+  --primary: #4F46E5;
+  --primary-glow: rgba(79, 70, 229, 0.2);
+  --accent: #059669;
+  --danger: #E11D48;
+}
+
 @theme {
-  --color-background: #0B0F19;
-  --color-card: rgba(255, 255, 255, 0.05);
-  --color-primary: #6366f1; /* Electric Indigo */
-  --color-primary-glow: rgba(99, 102, 241, 0.5);
-  --color-accent: #10B981; /* Emerald */
-  --color-danger: #F43F5E; /* Rose */
+  --color-background: var(--bg-main);
+  --color-card: var(--bg-card);
+  --color-primary: var(--primary);
+  --color-primary-glow: var(--primary-glow);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-danger: var(--danger);
+  --color-text: var(--text-main);
+  --color-text-muted: var(--text-muted);
 }
 
 @layer base {
-  body {
-    @apply bg-background text-white antialiased selection:bg-primary/30;
-    font-family: 'Inter', system-ui, sans-serif;
+  html, body {
+    @apply transition-colors duration-500 font-sans antialiased;
+    background-color: var(--bg-main);
+    color: var(--text-main);
   }
 }
 
 @layer components {
   .glass {
-    @apply backdrop-blur-2xl bg-white/[0.03] border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.8)];
+    @apply backdrop-blur-2xl bg-card border border-[var(--border-main)] shadow-[0_8px_32px_0_var(--shadow-color)] transition-all duration-500;
   }
 
   /* Dialer Button Neumorphism-Glass */
   .dialer-btn {
     @apply w-16 h-16 rounded-full flex items-center justify-center text-xl font-medium
-           bg-white/[0.03] border border-white/5 shadow-inner transition-all duration-200
-           hover:bg-white/10 hover:scale-105 active:scale-95 active:bg-primary/20
+           bg-card border border-[var(--border-main)] shadow-inner transition-all duration-200
+           hover:bg-[var(--bg-glass-hover)] hover:scale-105 active:scale-95 active:bg-primary/20
            focus:outline-none focus:ring-2 focus:ring-primary/40;
   }
 
