@@ -29,7 +29,7 @@ export function useAdmin() {
       const [channelsRes, endpointsRes, registrationsRes] = await Promise.all([
         fetch(`${baseUrl}/channels?api_key=${apiKey}`),
         fetch(`${baseUrl}/endpoints?api_key=${apiKey}`),
-        fetch(`http://${baseIp}:5000/registrations`).catch(() => null) 
+        fetch(`http://${baseIp}:5000/registrations`).catch(() => null)
       ]);
 
       if (!channelsRes.ok || !endpointsRes.ok) {
@@ -38,7 +38,7 @@ export function useAdmin() {
 
       stats.channels = await channelsRes.json();
       stats.endpoints = await endpointsRes.json();
-      
+
       if (registrationsRes && registrationsRes.ok) {
         stats.registrations = await registrationsRes.json();
       } else {
@@ -64,14 +64,14 @@ export function useAdmin() {
     // Force secure protocols for remote domains or if the page is HTTPS
     const isRemote = baseIp !== 'localhost' && !baseIp.startsWith('127.');
     const isSecure = window.location.protocol === 'https:' || isRemote;
-    
+
     const protocol = isSecure ? 'wss' : 'ws';
     const port = isSecure ? '8089' : '8088';
-    
-    const user = isRemote ? (import.meta.env.VITE_ARI_USER || 'callme') : 'admin';
-    const pass = isRemote ? (import.meta.env.VITE_ARI_PASS || 'callme') : 'adminpass';
+
+    const user = isRemote ? (import.meta.env.VITE_ARI_USER) : 'admin';
+    const pass = isRemote ? (import.meta.env.VITE_ARI_PASS) : 'adminpass';
     const apiKey = `${user}:${pass}`;
-    
+
     const wsUrl = `${protocol}://${baseIp}:${port}/ari/events?api_key=${apiKey}&app=softphone_monitor&subscribeAll=true`;
     console.log(`[ARI] Attempting connection to: ${wsUrl}`);
 
@@ -89,7 +89,7 @@ export function useAdmin() {
         console.log('ARI Event Stream Connected');
         stats.isPushActive = true;
         fetchStats(baseIp); // Initial sync
-        
+
         // Safety Net: Gentle background sync every 5s to catch any skewed states
         fallbackInterval = setInterval(() => {
           if (isActive) fetchStats(baseIp);
@@ -102,19 +102,19 @@ export function useAdmin() {
 
         // Catch all events to trigger instant updates
         if (debounceTimer) clearTimeout(debounceTimer);
-        
+
         debounceTimer = setTimeout(() => {
           if (isActive) {
             console.log(`ARI Sync Triggered by: ${data.type}`);
             fetchStats(baseIp);
           }
-        }, 500); 
+        }, 500);
       };
 
       socket.onclose = () => {
         stats.isPushActive = false;
         if (fallbackInterval) clearInterval(fallbackInterval);
-        
+
         if (isActive) {
           console.warn('ARI Stream Closed. Reconnecting...');
           scheduleReconnect(baseIp);
