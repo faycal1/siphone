@@ -98,8 +98,6 @@ export function useAdmin() {
 
       socket.onmessage = (event) => {
         if (!isActive) return;
-        const data = JSON.parse(event.data);
-
         // Catch all events to trigger instant updates
         if (debounceTimer) clearTimeout(debounceTimer);
 
