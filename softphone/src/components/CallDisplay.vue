@@ -1,17 +1,31 @@
 <script setup lang="ts">
-import { Mic, MicOff, PhoneOff, Phone, User, Volume2, ShieldCheck, LayoutGrid, X, Delete, Activity, Zap } from 'lucide-vue-next';
+import { 
+  Mic, MicOff, PhoneOff, Phone, User, Volume2, ShieldCheck, 
+  LayoutGrid, X, Delete, Activity, Zap,
+  ArrowRightLeft, MoveRight, Pause, Play, PhoneForwarded, MessageSquare 
+} from 'lucide-vue-next';
 import { ref, computed, watch, onUnmounted } from 'vue';
 
 const props = defineProps({
   currentCall: {
     type: Object,
     required: true
+  },
+  consultSession: {
+    type: Object,
+    default: null
   }
 });
 
-const emit = defineEmits(['hangup', 'answer', 'dtmf']);
+const emit = defineEmits([
+  'hangup', 'answer', 'dtmf', 
+  'hold', 'unhold', 'blind-transfer', 
+  'attended-transfer', 'complete-transfer', 'cancel-transfer'
+]);
 
 const isKeypadOpen = ref(false);
+const isTransferOpen = ref(false);
+const transferTarget = ref('');
 const dtmfSequence = ref('');
 const callDuration = ref(0);
 const isMuted = ref(false);
@@ -36,6 +50,7 @@ const formattedDuration = computed(() => {
   const s = callDuration.value % 60;
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 });
+
 watch(() => props.currentCall.status, (newStatus) => {
   if (newStatus === 'In Call' || newStatus?.includes('connected')) {
     if (!timerInterval) startTimer();
@@ -51,14 +66,22 @@ const toggleMute = () => {
   isMuted.value = !isMuted.value;
 };
 
-// Audio Rendering Logic
-// (Handled globally by useSIP.ts to prevent race conditions on extension 600)
+const handleBlind = () => {
+  if (!transferTarget.value) return;
+  emit('blind-transfer', transferTarget.value);
+  isTransferOpen.value = false;
+  transferTarget.value = '';
+};
+
+const handleAttended = () => {
+  if (!transferTarget.value) return;
+  emit('attended-transfer', transferTarget.value);
+  isTransferOpen.value = false;
+  transferTarget.value = '';
+};
 
 const handleForceAudio = () => {
-  //console.log('Manual Audio Kickstart requested');
   if (props.currentCall.remoteStream) {
-    // Attempting to play the stream via the browser's global media interface
-    // which useSIP's global element is currently processing
     const audio = document.querySelector('audio');
     if (audio) {
       audio.play().catch(e => console.error('Kickstart failed:', e));
@@ -120,32 +143,68 @@ const handleForceAudio = () => {
         <ShieldCheck class="w-3.5 h-3.5 text-accent" />
       </div>
 
-      <!-- Action Buttons -->
-      <div class="flex items-center gap-6 relative z-10">
-        <!-- Option Buttons (Mute/Speaker) -->
-        <div class="flex gap-4">
-          <div @click="toggleMute" class="bg-card/80 backdrop-blur-md p-4 rounded-full border border-[var(--border-main)] cursor-pointer hover:bg-[var(--bg-glass-hover)] transition-all hover:scale-110 shadow-xl group/btn">
-            <Mic v-if="!isMuted" class="w-5 h-5 text-text-muted group-hover/btn:text-text transition-colors" />
-            <MicOff v-else class="w-5 h-5 text-rose-500" />
-          </div>
-          <div class="bg-card/80 backdrop-blur-md p-4 rounded-full border border-[var(--border-main)] cursor-pointer hover:bg-[var(--bg-glass-hover)] transition-all hover:scale-110 shadow-xl group/btn">
-            <Volume2 class="w-5 h-5 text-text-muted group-hover/btn:text-text transition-colors" />
-          </div>
-        </div>
-        
-        <!-- Hangup Button -->
-        <button 
-          @click="emit('hangup')"
-          class="bg-rose-500 p-6 rounded-full shadow-[0_0_40px_0_rgba(244,63,94,0.3)] hover:bg-rose-600 hover:scale-110 active:scale-95 transition-all group/hangup"
-        >
-          <PhoneOff class="w-8 h-8 text-white rotate-[135deg] group-hover/hangup:scale-110 transition-transform" />
-        </button>
+      <!-- NEW: Unified Command Dock (Refined Size) -->
+        <div class="flex items-center gap-4 px-5 py-3 rounded-[3rem] bg-card/30 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-in slide-in-from-bottom-6 duration-700">
+          
+          <!-- Left Wing: Media & Input -->
+          <div class="flex gap-2.5">
+            <!-- Mute Toggle -->
+            <div 
+              @click="toggleMute" 
+              :class="[
+                'p-3 rounded-full border transition-all duration-300 cursor-pointer hover:scale-110 active:scale-95 group/btn',
+                isMuted ? 'bg-rose-500/20 border-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'
+              ]"
+            >
+              <Mic v-if="!isMuted" class="w-4 h-4 text-white/50 group-hover/btn:text-white transition-colors" />
+              <MicOff v-else class="w-4 h-4 text-rose-500 animate-pulse" />
+            </div>
 
-        <!-- Keypad Trigger -->
-        <div @click="isKeypadOpen = !isKeypadOpen" class="bg-card/80 backdrop-blur-md p-4 rounded-full border border-[var(--border-main)] cursor-pointer hover:bg-[var(--bg-glass-hover)] transition-all hover:scale-110 shadow-xl group/btn">
-          <LayoutGrid class="w-5 h-5 text-text-muted group-hover/btn:text-text transition-colors" />
+            <!-- Keypad Toggle -->
+            <div 
+              @click="isKeypadOpen = !isKeypadOpen" 
+              :class="[
+                'p-3 rounded-full border transition-all duration-300 cursor-pointer hover:scale-110 active:scale-95 group/btn',
+                isKeypadOpen ? 'bg-primary/20 border-primary/40 shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'
+              ]"
+            >
+              <LayoutGrid class="w-4 h-4 text-white/50 group-hover/btn:text-white transition-colors" />
+            </div>
+          </div>
+
+          <!-- Center: Primary Action (Hangup) -->
+          <button 
+            @click="emit('hangup')"
+            class="mx-1 bg-rose-500 p-4 rounded-full shadow-[0_0_25px_rgba(244,63,94,0.4)] hover:shadow-[0_0_40px_rgba(244,63,94,0.6)] hover:scale-110 active:scale-90 transition-all group/hangup"
+          >
+            <PhoneOff class="w-6 h-6 text-white rotate-[135deg] group-hover/hangup:scale-110 transition-transform" />
+          </button>
+
+          <!-- Right Wing: Call Management -->
+          <div class="flex gap-2.5">
+            <!-- Hold/Unhold -->
+            <div 
+              v-if="currentCall.status === 'In Call' || currentCall.status === 'On Hold'"
+              @click="currentCall.status === 'On Hold' ? emit('unhold') : emit('hold')" 
+              :class="[
+                'p-3 rounded-full border transition-all duration-300 cursor-pointer hover:scale-110 active:scale-95 group/btn',
+                currentCall.status === 'On Hold' ? 'bg-amber-500/20 border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'
+              ]"
+            >
+              <Pause v-if="currentCall.status === 'In Call'" class="w-4 h-4 text-white/50 group-hover/btn:text-white transition-colors" />
+              <Play v-else class="w-4 h-4 text-amber-500 animate-pulse" />
+            </div>
+
+            <!-- Transfer Dialog -->
+            <div 
+              v-if="currentCall.status === 'In Call'"
+              @click="isTransferOpen = true" 
+              class="bg-white/5 border border-white/10 p-3 rounded-full cursor-pointer hover:bg-white/10 hover:scale-110 active:scale-95 transition-all shadow-xl group/btn"
+            >
+              <ArrowRightLeft class="w-4 h-4 text-white/50 group-hover/btn:text-white transition-colors" />
+            </div>
+          </div>
         </div>
-      </div>
     </div>
     
     <!-- Identity Info -->
@@ -242,13 +301,87 @@ const handleForceAudio = () => {
 
       <!-- Hangup / Reject Button -->
       <button
+        v-if="!consultSession"
         id="btn-hangup"
         @click="emit('hangup')"
         class="w-20 h-20 rounded-full bg-danger text-white flex items-center justify-center shadow-[0_0_30px_0_rgba(244,63,94,0.4)] hover:shadow-[0_0_40px_0_rgba(244,63,94,0.6)] hover:scale-105 active:scale-95 transition-all duration-300 group"
       >
         <PhoneOff class="w-8 h-8 group-hover:scale-110 transition-transform" />
       </button>
+
+      <!-- Consultation Hand-off Controls -->
+      <div v-else class="flex flex-col items-center gap-6 animate-in slide-in-from-bottom duration-500 w-full max-w-[320px]">
+        <div class="px-6 py-4 rounded-3xl bg-accent text-black w-full flex flex-col items-center shadow-2xl">
+          <span class="text-[10px] font-black uppercase tracking-[0.2em] mb-1 opacity-60">Consultation Active</span>
+          <span class="text-lg font-bold">Extension {{ transferTarget || 'Transfer' }}</span>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4 w-full">
+          <button 
+            @click="emit('complete-transfer')"
+            class="flex items-center justify-center gap-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-emerald-500/20 text-[10px]"
+          >
+            <PhoneForwarded class="w-4 h-4" />
+            Confirm
+          </button>
+          <button 
+            @click="emit('cancel-transfer')"
+            class="flex items-center justify-center gap-2.5 bg-rose-500 hover:bg-rose-600 text-white font-black uppercase tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-rose-500/20 text-[10px]"
+          >
+            <X class="w-4 h-4" />
+            Abort
+          </button>
+        </div>
+      </div>
     </div>
+
+    <!-- Transfer Dialog Overlay -->
+    <Transition name="overlay-fade">
+      <div v-if="isTransferOpen" class="absolute inset-0 z-[60] bg-background/90 backdrop-blur-3xl flex flex-col items-center justify-center p-10 rounded-[48px]">
+        <button @click="isTransferOpen = false" class="absolute top-10 right-10 p-4 text-text-muted hover:text-text transition-colors">
+          <X class="w-8 h-8" />
+        </button>
+
+        <div class="text-center mb-10">
+          <div class="w-20 h-20 rounded-[2rem] bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-6">
+            <ArrowRightLeft class="w-10 h-10 text-primary" />
+          </div>
+          <h3 class="text-lg font-black uppercase tracking-[0.4em] text-white">Call Transfer</h3>
+          <p class="text-[10px] text-text-muted font-bold mt-2">DÉVIER CET APPEL VERS...</p>
+        </div>
+
+        <div class="w-full max-w-[280px] flex flex-col gap-8">
+          <div class="relative group">
+            <User class="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-text-muted group-focus-within:text-primary transition-colors" />
+            <input 
+              v-model="transferTarget"
+              type="text" 
+              placeholder="Extension"
+              class="w-full bg-card border-none rounded-3xl py-6 pl-16 pr-8 text-2xl text-white font-light outline-none ring-1 ring-white/10 focus:ring-primary/50 transition-all placeholder:text-white/10"
+              autofocus
+              @keyup.enter="handleAttended"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <button 
+              @click="handleBlind"
+              class="flex flex-col items-center gap-3 p-6 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group"
+            >
+              <MoveRight class="w-6 h-6 text-text-muted group-hover:text-amber-400 transition-colors" />
+              <span class="text-[9px] font-black uppercase tracking-widest text-text-muted">Blind</span>
+            </button>
+            <button 
+              @click="handleAttended"
+              class="flex flex-col items-center gap-3 p-6 rounded-3xl bg-primary/10 border border-primary/20 hover:bg-primary/20 hover:border-primary/40 transition-all group"
+            >
+              <MessageSquare class="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
+              <span class="text-[9px] font-black uppercase tracking-widest text-primary">Warm</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Keypad Overlay -->
     <Transition name="overlay-fade">

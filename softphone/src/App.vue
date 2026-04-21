@@ -45,7 +45,12 @@ const config = ref({
 
 const isSettingsOpen = ref(false);
 
-const { state, connect, disconnect, makeCall, terminateCall, answerCall, sendDTMF, clearLogs } = useSIP();
+const { 
+  state, connect, disconnect, makeCall, terminateCall, answerCall, sendDTMF, clearLogs,
+  enumerateDevices, setAudioOutput,
+  hold, unhold, blindTransfer, startAttendedTransfer, completeAttendedTransfer, cancelAttendedTransfer,
+  consultSession
+} = useSIP();
 
 // Derived State
 const serverIp = computed(() => {
@@ -190,9 +195,16 @@ const handleCall = (target: string) => {
               <CallDisplay 
                 v-if="state.currentCall" 
                 :currentCall="state.currentCall" 
+                :consultSession="consultSession"
                 @hangup="terminateCall" 
                 @answer="answerCall" 
                 @dtmf="sendDTMF"
+                @hold="hold"
+                @unhold="unhold"
+                @blind-transfer="blindTransfer"
+                @attended-transfer="startAttendedTransfer"
+                @complete-transfer="completeAttendedTransfer"
+                @cancel-transfer="cancelAttendedTransfer"
               />
 
               <!-- Standard Dialer Interface -->
@@ -275,8 +287,11 @@ const handleCall = (target: string) => {
       <SettingsPanel 
         v-if="isSettingsOpen" 
         :config="config" 
+        :sipState="state"
         @update="updateConfig"
         @close="isSettingsOpen = false"
+        @enumerate-devices="enumerateDevices"
+        @set-output="setAudioOutput"
       />
     </Transition>
 
