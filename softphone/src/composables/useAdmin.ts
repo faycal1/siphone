@@ -26,9 +26,10 @@ export function useAdmin() {
     const apiKey = `${user}:${pass}`;
 
     try {
-      const [channelsRes, endpointsRes] = await Promise.all([
+      const [channelsRes, endpointsRes, registrationsRes] = await Promise.all([
         fetch(`${baseUrl}/channels?api_key=${apiKey}`),
-        fetch(`${baseUrl}/endpoints?api_key=${apiKey}`)
+        fetch(`${baseUrl}/endpoints?api_key=${apiKey}`),
+        fetch(`http://${baseIp}:5000/registrations`).catch(() => null) 
       ]);
 
       if (!channelsRes.ok || !endpointsRes.ok) {
@@ -37,7 +38,13 @@ export function useAdmin() {
 
       stats.channels = await channelsRes.json();
       stats.endpoints = await endpointsRes.json();
-      stats.registrations = []; // Clear mock data
+      
+      if (registrationsRes && registrationsRes.ok) {
+        stats.registrations = await registrationsRes.json();
+      } else {
+        stats.registrations = [];
+      }
+
       stats.isOnline = true;
       stats.error = null;
     } catch (err: any) {
