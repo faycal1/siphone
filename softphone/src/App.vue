@@ -227,16 +227,17 @@ const handleCall = (target: string) => {
           </div>
 
           <!-- Log Content Area -->
-          <div class="flex-1 px-8 py-8 overflow-y-auto scrollbar-thin scrollbar-thumb-white/5 overscroll-contain">
+          <div class="flex-1 px-8 py-8 overflow-hidden scrollbar-none overscroll-contain flex flex-col justify-end">
             <TransitionGroup name="log-item" tag="div" class="flex flex-col gap-3">
               <div 
                 v-for="(log, i) in state.logs" 
                 :key="i" 
-                class="flex flex-col gap-1 text-[10px] font-mono leading-relaxed group/log p-3 rounded-lg hover:bg-card transition-colors border-l-2 border-[var(--border-main)] shadow-sm"
+                class="flex flex-col gap-1 text-[10px] font-mono leading-relaxed group/log p-3 rounded-lg hover:bg-card transition-all duration-500 border-l-2 border-[var(--border-main)] shadow-sm"
                 :class="[
                   log.type === 'error' ? 'border-rose-500/30' : 
                   log.type === 'success' ? 'border-accent/30' : 
-                  'border-primary/20'
+                  'border-primary/20',
+                  i === state.logs.length - 1 ? 'p-5 bg-primary/5 border-l-4 border-primary/50 shadow-lg scale-[1.02] origin-bottom' : ''
                 ]"
               >
                 <div class="flex justify-between items-center opacity-30 text-[8px] uppercase tracking-tighter mb-1 font-sans">
@@ -246,8 +247,9 @@ const handleCall = (target: string) => {
                 <span :class="[
                   log.type === 'error' ? 'text-rose-400' : 
                   log.type === 'success' ? 'text-accent' : 
-                  'text-text'
-                ]" class="font-medium tracking-tight break-words">{{ log.msg }}</span>
+                  'text-text',
+                  i === state.logs.length - 1 ? 'font-black text-[13px] tracking-normal' : 'font-medium opacity-60'
+                ]" class="tracking-tight break-words transition-all duration-300">{{ log.msg }}</span>
               </div>
             </TransitionGroup>
 
@@ -435,5 +437,13 @@ const handleCall = (target: string) => {
   opacity: 0;
   transform: scale(0.9) translateY(20px);
   filter: blur(10px);
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 </style>

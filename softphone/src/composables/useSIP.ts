@@ -44,13 +44,13 @@ export function useSIP() {
       return;
     }
 
-    state.logs.unshift({
+    state.logs.push({
       time: new Date().toLocaleTimeString(),
       msg,
       type,
       level
     });
-    if (state.logs.length > 50) state.logs.pop();
+    if (state.logs.length > 50) state.logs.shift();
   };
 
   const addLog = (msg: string, type: 'info' | 'error' | 'success' = 'info') => {
