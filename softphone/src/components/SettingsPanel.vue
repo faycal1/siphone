@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { X, Settings, User, Lock, Globe, Eye, EyeOff } from 'lucide-vue-next';
+import { X, Settings, User, Lock, Globe, Eye, EyeOff, HelpCircle } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const props = defineProps<{
@@ -23,6 +23,7 @@ const localConfig = ref({
 });
 const showPassword = ref(false);
 const showAdvanced = ref(false);
+const showHelp = ref(false);
 
 // Presets Definition
 const presets = [
@@ -148,10 +149,20 @@ const handleSave = () => {
         <!-- Advanced Toggle -->
         <div class="flex flex-col gap-4">
           <button 
+            type="button"
             @click="showAdvanced = !showAdvanced"
             class="flex items-center justify-between px-1 py-1 group"
           >
-            <span class="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)] group-hover:text-primary transition-colors">Advanced Settings</span>
+            <div class="flex items-center gap-2">
+              <span class="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)] group-hover:text-primary transition-colors">Advanced Settings</span>
+              <button 
+                type="button"
+                @click.stop="showHelp = true"
+                class="p-1 rounded-full hover:bg-primary/20 text-[var(--text-muted)] hover:text-primary transition-all"
+              >
+                <HelpCircle class="w-2.5 h-2.5" />
+              </button>
+            </div>
             <div class="h-[1px] flex-1 mx-4 bg-[var(--border-main)] opacity-50"></div>
             <Settings class="w-3 h-3 text-[var(--text-muted)] group-hover:rotate-45 transition-all" />
           </button>
@@ -190,7 +201,10 @@ const handleSave = () => {
                 />
               </div>
             </div>
-            <span class="text-[8px] text-[var(--text-muted)] italic leading-relaxed px-1">Use TURN if calls connect but have no audio on remote networks.</span>
+            <span class="text-[8px] text-[var(--text-muted)] italic leading-relaxed px-1">
+              Use TURN if calls connect but have no audio on remote networks.<br/>
+              <span class="text-primary/70">Utilisez TURN si l'appel est établi mais qu'il n'y a pas de son (cas des réseaux restreints).</span>
+            </span>
           </div>
         </div>
 
@@ -203,12 +217,73 @@ const handleSave = () => {
         </button>
       </div>
     </div>
+
+    <!-- Help Modal Overlay -->
+    <Transition name="overlay-fade">
+      <div v-if="showHelp" class="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+        <div class="glass w-full max-w-[340px] rounded-[2rem] p-8 border border-white/20 bg-gradient-to-br from-card to-background relative shadow-2xl animate-in zoom-in duration-300">
+          <button @click="showHelp = false" class="absolute top-6 right-6 p-2 rounded-full hover:bg-white/10 text-text-muted transition-colors">
+            <X class="w-4 h-4" />
+          </button>
+
+          <div class="flex flex-col gap-6">
+            <div class="flex items-center gap-4">
+              <div class="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+                <HelpCircle class="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h3 class="text-xs font-black uppercase tracking-[0.2em] text-white">Relais TURN</h3>
+                <p class="text-[10px] text-primary font-bold">Aide à la Connexion Réseau</p>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div class="bg-white/5 rounded-2xl p-4 border border-white/5">
+                <h4 class="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-2">C'est quoi ?</h4>
+                <p class="text-[11px] leading-relaxed text-text-muted font-light">
+                  C'est votre <span class="text-white font-bold">dernier recours</span>. Si votre pare-feu bloque la connexion directe, le son passera par ce serveur relais.
+                </p>
+              </div>
+
+              <div class="bg-white/5 rounded-2xl p-4 border border-white/5">
+                <h4 class="text-[9px] font-black uppercase tracking-widest text-amber-400 mb-2">Quand l'utiliser ?</h4>
+                <p class="text-[11px] leading-relaxed text-text-muted font-light">
+                  À utiliser obligatoirement si vous avez des <span class="text-amber-400 font-bold">"Appels Silencieux"</span> (l'appel décroche mais aucun son ne passe).
+                </p>
+              </div>
+
+              <p class="text-[9px] text-white/30 italic text-center px-4">
+                Typique pour les bureaux, hôpitaux ou réseaux 4G/5G restreints.
+              </p>
+            </div>
+
+            <button 
+              @click="showHelp = false"
+              class="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-all text-sm border border-white/10"
+            >
+              Compris
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <style scoped>
 .animate-fade-in-scale {
   animation: fade-in-scale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.overlay-fade-enter-active,
+.overlay-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.overlay-fade-enter-from,
+.overlay-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
 }
 
 @keyframes fade-in-scale {
