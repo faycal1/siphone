@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { X, Settings, User, Lock, Globe, Eye, EyeOff, HelpCircle } from 'lucide-vue-next';
+import { X, Settings, User, Lock, Globe, Eye, EyeOff, HelpCircle, ChevronDown } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const props = defineProps<{
@@ -10,10 +10,17 @@ const props = defineProps<{
     turnUrl?: string;
     turnUser?: string;
     turnPass?: string;
-  }
+  },
+  sipState: any
 }>();
 
-const emit = defineEmits(['update', 'close']);
+const emit = defineEmits(['update', 'close', 'enumerate-devices', 'set-output']);
+import { onMounted } from 'vue';
+import { Mic, Volume2, Zap } from 'lucide-vue-next';
+
+onMounted(() => {
+  emit('enumerate-devices');
+});
 
 const localConfig = ref({ 
   turnUrl: '',
@@ -23,6 +30,7 @@ const localConfig = ref({
 });
 const showPassword = ref(false);
 const showAdvanced = ref(false);
+const showHardware = ref(false);
 const showHelp = ref(false);
 
 // Presets Definition
@@ -208,6 +216,70 @@ const handleSave = () => {
           </div>
         </div>
 
+        <!-- Audio & Devices Section (Collapsible) -->
+        <div class="flex flex-col gap-4">
+          <button 
+            type="button"
+            @click="showHardware = !showHardware"
+            class="flex items-center justify-between px-1 py-1 group"
+          >
+            <div class="flex items-center gap-2">
+              <span class="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)] group-hover:text-primary transition-colors">Audio & Devices</span>
+            </div>
+            <div class="h-[1px] flex-1 mx-4 bg-[var(--border-main)] opacity-50"></div>
+            <Mic class="w-3 h-3 text-[var(--text-muted)] group-hover:scale-110 transition-all" />
+          </button>
+
+          <div v-if="showHardware" class="flex flex-col gap-5 animate-fade-in">
+            <div class="flex flex-col gap-4">
+              <!-- Mic Selector -->
+              <div class="flex flex-col gap-1.5 px-1">
+                <label class="text-[8px] font-bold uppercase tracking-wider text-[var(--text-muted)] opacity-50">Microphone</label>
+                <select 
+                  v-model="props.sipState.selectedDevices.inputId"
+                  class="w-full bg-[var(--bg-card)] border border-[var(--border-main)] rounded-lg py-2 px-3 text-[10px] text-[var(--text-main)] outline-none appearance-none"
+                >
+                  <option v-for="d in props.sipState.availableDevices.inputs" :key="d.deviceId" :value="d.deviceId">
+                    {{ d.label || 'Mic ' + d.deviceId.slice(0,4) }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Speaker Selector -->
+              <div class="flex flex-col gap-1.5 px-1">
+                <label class="text-[8px] font-bold uppercase tracking-wider text-[var(--text-muted)] opacity-50">Speaker (Chrome/Edge Only)</label>
+                <select 
+                  :value="props.sipState.selectedDevices.outputId"
+                  @change="emit('set-output', ($event.target as HTMLSelectElement).value)"
+                  class="w-full bg-[var(--bg-card)] border border-[var(--border-main)] rounded-lg py-2 px-3 text-[10px] text-[var(--text-main)] outline-none appearance-none"
+                >
+                  <option v-for="d in props.sipState.availableDevices.outputs" :key="d.deviceId" :value="d.deviceId">
+                    {{ d.label || 'Speaker ' + d.deviceId.slice(0,4) }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Intercom Toggle -->
+              <div class="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/20">
+                <div class="flex items-center gap-3">
+                  <Zap class="w-4 h-4 text-emerald-400" />
+                  <div class="flex flex-col">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-white">Intercom Mode</span>
+                    <span class="text-[8px] text-[var(--text-muted)]">Auto-Answer internal calls</span>
+                  </div>
+                </div>
+                <button 
+                  @click="props.sipState.isAutoAnswerEnabled = !props.sipState.isAutoAnswerEnabled"
+                  class="w-8 h-4 rounded-full relative transition-all duration-300"
+                  :class="props.sipState.isAutoAnswerEnabled ? 'bg-emerald-500' : 'bg-[var(--border-main)]'"
+                >
+                  <div class="absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all duration-300" :class="props.sipState.isAutoAnswerEnabled ? 'left-4.5' : 'left-0.5'"></div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Persuasion / Save Button -->
         <button 
           @click="handleSave"
@@ -289,5 +361,14 @@ const handleSave = () => {
 @keyframes fade-in-scale {
   from { opacity: 0; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

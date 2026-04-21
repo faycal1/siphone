@@ -15,6 +15,7 @@ export function useSIP() {
   const socket = shallowRef<any>(null);
   const ua = shallowRef<JsSIP.UA | null>(null);
   const session = shallowRef<any>(null);
+  const consultSession = shallowRef<any>(null); // For Attended Transfer
   const remoteAudio = markRaw(new Audio());
 
   remoteAudio.autoplay = true;
@@ -41,6 +42,15 @@ export function useSIP() {
     } | null,
     activePreset: 'Local Dev',
     logs: [] as { time: string; msg: string; type: 'info' | 'error' | 'success'; level: LogLevel }[],
+    availableDevices: {
+      inputs: [] as MediaDeviceInfo[],
+      outputs: [] as MediaDeviceInfo[]
+    },
+    selectedDevices: {
+      inputId: 'default',
+      outputId: 'default'
+    },
+    isAutoAnswerEnabled: false,
   });
 
 
@@ -61,6 +71,39 @@ export function useSIP() {
 
   const addLog = (msg: string, type: 'info' | 'error' | 'success' = 'info') => {
     sysLog(msg, LogLevel.INFO, type);
+  };
+
+  const enumerateDevices = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      state.availableDevices.inputs = devices.filter(d => d.kind === 'audioinput');
+      state.availableDevices.outputs = devices.filter(d => d.kind === 'audiooutput');
+      
+      // Auto-select defaults if not set
+      if (state.selectedDevices.inputId === 'default' && state.availableDevices.inputs.length > 0) {
+        state.selectedDevices.inputId = state.availableDevices.inputs[0].deviceId;
+      }
+      if (state.selectedDevices.outputId === 'default' && state.availableDevices.outputs.length > 0) {
+        state.selectedDevices.outputId = state.availableDevices.outputs[0].deviceId;
+      }
+    } catch (err) {
+      console.error('Error enumerating devices:', err);
+    }
+  };
+
+  const setAudioOutput = async (deviceId: string) => {
+    state.selectedDevices.outputId = deviceId;
+    if ((remoteAudio as any).setSinkId) {
+      try {
+        await (remoteAudio as any).setSinkId(deviceId);
+        sysLog(`Audio output set to: ${deviceId}`, LogLevel.DEBUG, 'success');
+      } catch (err: any) {
+        sysLog(`Failed to set audio output: ${err.message}`, LogLevel.ERROR, 'error');
+      }
+    } else {
+      sysLog('Speaker selection not supported in this browser', LogLevel.NOTICE, 'info');
+    }
   };
 
   const connect = (config: {
@@ -222,6 +265,15 @@ export function useSIP() {
 
         if (data.originator === 'remote') {
           sounds.playRingtone();
+          
+          // AUTO-ANSWER / INTERCOM LOGIC
+          if (state.isAutoAnswerEnabled) {
+            const alertInfo = data.session.request.getHeader('Alert-Info');
+            if (alertInfo && (alertInfo.toLowerCase().includes('autoanswer') || alertInfo.toLowerCase().includes('intercom'))) {
+              sysLog('Auto-answering Intercom call...', LogLevel.NOTICE, 'success');
+              setTimeout(() => answerCall(), 500); // Tiny delay for stability
+            }
+          }
         }
 
         const handlePC = (pc: RTCPeerConnection) => {
@@ -368,8 +420,15 @@ export function useSIP() {
     }
   };
 
-  // High-fidelity Audio Constraints (from InnovateAsterisk)
-  const audioConstraints = true;
+  // High-fidelity Audio Constraints
+  const getAudioConstraints = () => {
+    return {
+      deviceId: state.selectedDevices.inputId !== 'default' ? { exact: state.selectedDevices.inputId } : undefined,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    };
+  };
 
   const makeCall = (target: string) => {
     if (!ua.value || !state.isRegistered) {
@@ -392,7 +451,7 @@ export function useSIP() {
     addLog(`Initiating call to ${target}...`);
 
     const options = {
-      mediaConstraints: { audio: audioConstraints, video: false },
+      mediaConstraints: { audio: getAudioConstraints(), video: false },
       pcConfig: (ua.value as any).configuration.pcConfig,
       rtcConstraints: { 'optional': [{ 'DtlsSrtpKeyAgreement': 'true' }] }
     };
@@ -417,7 +476,7 @@ export function useSIP() {
     if (session.value && state.currentCall?.isIncoming) {
       sounds.stopAll();
       session.value.answer({
-        mediaConstraints: { audio: audioConstraints, video: false }
+        mediaConstraints: { audio: getAudioConstraints(), video: false }
       });
     }
   };
@@ -442,6 +501,95 @@ export function useSIP() {
     }
   };
 
+  const hold = () => {
+    if (session.value && !session.value.isOnHold().local) {
+      session.value.hold({
+        useUpdate: true // More stable for Asterisk
+      });
+      if (state.currentCall) state.currentCall.status = 'On Hold';
+      sysLog('Call put on Hold', LogLevel.NOTICE);
+    }
+  };
+
+  const unhold = () => {
+    if (session.value && session.value.isOnHold().local) {
+      session.value.unhold({
+        useUpdate: true
+      });
+      if (state.currentCall) state.currentCall.status = 'In Call';
+      sysLog('Call resumed', LogLevel.NOTICE);
+    }
+  };
+
+  const blindTransfer = (target: string) => {
+    if (session.value && target) {
+      try {
+        session.value.refer(target);
+        sysLog(`Blind Transfer initiated to: ${target}`, LogLevel.NOTICE, 'success');
+      } catch (err: any) {
+        addLog(`Transfer Error: ${err.message}`, 'error');
+      }
+    }
+  };
+
+  const startAttendedTransfer = (target: string) => {
+    if (!ua.value || !session.value || !target) return;
+
+    try {
+      // 1. Hold original call
+      hold();
+      
+      const domain = ((ua.value as any).configuration.uri as any).host;
+      const options = {
+        mediaConstraints: { audio: getAudioConstraints(), video: false },
+        pcConfig: (ua.value as any).configuration.pcConfig,
+        rtcConstraints: { 'optional': [{ 'DtlsSrtpKeyAgreement': 'true' }] }
+      };
+
+      // 2. Start consult call
+      consultSession.value = ua.value.call(`sip:${target}@${domain}`, options);
+      sysLog(`Consultation call started to: ${target}`, LogLevel.NOTICE);
+
+      consultSession.value.on('failed', () => {
+        sysLog('Consultation failed, reverting...', LogLevel.NOTICE, 'error');
+        consultSession.value = null;
+        unhold();
+      });
+
+      consultSession.value.on('ended', () => {
+        consultSession.value = null;
+      });
+    } catch (err: any) {
+      addLog(`Attended Transfer Setup Error: ${err.message}`, 'error');
+    }
+  };
+
+  const completeAttendedTransfer = () => {
+    if (session.value && consultSession.value) {
+      try {
+        const replaces = `${consultSession.value.dialog.id.call_id};to-tag=${consultSession.value.dialog.id.remote_tag};from-tag=${consultSession.value.dialog.id.local_tag}`;
+        const target = consultSession.value.remote_identity.uri.toString();
+        
+        session.value.refer(target + "?Replaces=" + encodeURIComponent(replaces));
+        sysLog('Attended Transfer completed', LogLevel.NOTICE, 'success');
+        
+        consultSession.value.terminate();
+        consultSession.value = null;
+      } catch (err: any) {
+        addLog(`Attended Transfer Commit Error: ${err.message}`, 'error');
+      }
+    }
+  };
+
+  const cancelAttendedTransfer = () => {
+    if (consultSession.value) {
+      consultSession.value.terminate();
+      consultSession.value = null;
+    }
+    unhold();
+    sysLog('Attended Transfer cancelled', LogLevel.NOTICE);
+  };
+
   return {
     state,
     connect,
@@ -450,6 +598,15 @@ export function useSIP() {
     terminateCall,
     answerCall,
     clearLogs,
-    sendDTMF
+    sendDTMF,
+    enumerateDevices,
+    setAudioOutput,
+    hold,
+    unhold,
+    blindTransfer,
+    startAttendedTransfer,
+    completeAttendedTransfer,
+    cancelAttendedTransfer,
+    consultSession
   };
 };
