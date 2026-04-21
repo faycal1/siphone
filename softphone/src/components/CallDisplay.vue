@@ -94,9 +94,9 @@ const handleForceAudio = () => {
   <div class="flex flex-col items-center justify-center gap-10 py-10 h-full animate-in fade-in zoom-in duration-700 relative">
     
     <!-- Background Call Glow -->
-    <div v-if="currentCall.status === 'In Call'" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-accent/20 blur-[100px] rounded-full animate-pulse-slow"></div>
-    <div v-else-if="currentCall.isIncoming" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-emerald-500/20 blur-[100px] rounded-full animate-pulse-slow"></div>
-    <div v-else class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/20 blur-[100px] rounded-full animate-pulse-slow"></div>
+    <div v-if="currentCall.status === 'In Call'" class="absolute top-[15%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-accent/20 blur-[100px] rounded-full animate-pulse-slow"></div>
+    <div v-else-if="currentCall.isIncoming" class="absolute top-[15%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-emerald-500/20 blur-[100px] rounded-full animate-pulse-slow"></div>
+    <div v-else class="absolute top-[15%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/20 blur-[100px] rounded-full animate-pulse-slow"></div>
 
     <!-- Avatar Identity HUD -->
     <div class="relative z-10 group">
@@ -144,9 +144,12 @@ const handleForceAudio = () => {
       </div>
 
     <!-- Controls Layout -->
-    <div v-if="currentCall.status !== 'Incoming'" class="absolute inset-x-0 bottom-12 z-20 px-8 flex flex-col items-center gap-12">
+    <div v-if="currentCall.status !== 'Incoming'" class="absolute inset-x-0 bottom-[-35px] z-20 px-8 flex flex-col items-center gap-12">
+      <!-- Ambient Dock Glow -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-12 bg-primary/10 blur-[40px] rounded-full animate-pulse-slow"></div>
+      
       <!-- Unified Command Dock (Extra Compact Size) -->
-      <div class="flex items-center gap-3 px-4 py-2.5 rounded-[3rem] bg-card/30 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-in slide-in-from-bottom-6 duration-700">
+      <div class="relative flex items-center gap-3 px-4 py-2.5 rounded-[3rem] bg-card backdrop-blur-3xl border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-in slide-in-from-bottom-6 duration-700">
         
         <!-- Left Wing: Media & Input -->
         <div class="flex gap-2">
@@ -155,7 +158,7 @@ const handleForceAudio = () => {
             @click="toggleMute" 
             :class="[
               'p-2.5 rounded-full border transition-all duration-300 cursor-pointer hover:scale-110 active:scale-95 group/btn',
-              isMuted ? 'bg-rose-500/20 border-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'
+              isMuted ? 'bg-rose-500/20 border-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.2)]' : 'bg-white/10 border-white/10 hover:bg-white/10'
             ]"
           >
             <Mic v-if="!isMuted" class="w-3.5 h-3.5 text-white/50 group-hover/btn:text-white transition-colors" />
@@ -167,7 +170,7 @@ const handleForceAudio = () => {
             @click="isKeypadOpen = !isKeypadOpen" 
             :class="[
               'p-2.5 rounded-full border transition-all duration-300 cursor-pointer hover:scale-110 active:scale-95 group/btn',
-              isKeypadOpen ? 'bg-primary/20 border-primary/40 shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'
+              isKeypadOpen ? 'bg-primary/20 border-primary/40 shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]' : 'bg-white/10 border-white/10 hover:bg-white/10'
             ]"
           >
             <LayoutGrid class="w-3.5 h-3.5 text-white/50 group-hover/btn:text-white transition-colors" />
@@ -190,7 +193,7 @@ const handleForceAudio = () => {
             @click="currentCall.status === 'On Hold' ? emit('unhold') : emit('hold')" 
             :class="[
               'p-2.5 rounded-full border transition-all duration-300 cursor-pointer hover:scale-110 active:scale-95 group/btn',
-              currentCall.status === 'On Hold' ? 'bg-amber-500/20 border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'
+              currentCall.status === 'On Hold' ? 'bg-amber-500/20 border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'bg-white/10 border-white/10 hover:bg-white/10'
             ]"
           >
             <Pause v-if="currentCall.status === 'In Call'" class="w-3.5 h-3.5 text-white/50 group-hover/btn:text-white transition-colors" />
@@ -201,7 +204,7 @@ const handleForceAudio = () => {
           <div 
             v-if="currentCall.status === 'In Call'"
             @click="isTransferOpen = true" 
-            class="bg-white/5 border border-white/10 p-2.5 rounded-full cursor-pointer hover:bg-white/10 hover:scale-110 active:scale-95 transition-all shadow-xl group/btn"
+            class="bg-white/10 border border-white/10 p-2.5 rounded-full cursor-pointer hover:bg-white/10 hover:scale-110 active:scale-95 transition-all shadow-xl group/btn"
           >
             <ArrowRightLeft class="w-3.5 h-3.5 text-white/50 group-hover/btn:text-white transition-colors" />
           </div>
