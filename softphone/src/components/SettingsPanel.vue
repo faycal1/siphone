@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { X, Settings, User, Lock, Globe, Eye, EyeOff, HelpCircle, ChevronDown } from 'lucide-vue-next';
+import { X, Settings, User, Lock, Globe, Eye, EyeOff, HelpCircle } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const props = defineProps<{
@@ -16,7 +16,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['update', 'close', 'enumerate-devices', 'set-output']);
 import { onMounted } from 'vue';
-import { Mic, Volume2, Zap } from 'lucide-vue-next';
+import { Mic, Zap } from 'lucide-vue-next';
 
 onMounted(() => {
   emit('enumerate-devices');
