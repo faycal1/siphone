@@ -96,7 +96,7 @@ export function useAdmin() {
         }, 5000);
       };
 
-      socket.onmessage = (event) => {
+      socket.onmessage = () => {
         if (!isActive) return;
         // Catch all events to trigger instant updates
         if (debounceTimer) clearTimeout(debounceTimer);
