@@ -11,10 +11,10 @@ import { Terminal, ShieldCheck, Cpu, RefreshCw } from 'lucide-vue-next';
 
 // Configuration State
 const config = ref({
-  wsUrl: 'ws://127.0.0.1:8088/ws',
-  extension: '101',
-  password: '101pass',
-  name: 'Local Dev'
+  wsUrl: import.meta.env.VITE_REMOTE_WS_URL || 'ws://127.0.0.1:8088/ws',
+  extension: import.meta.env.VITE_REMOTE_EXTENSION || '101',
+  password: import.meta.env.VITE_REMOTE_PASSWORD || '101pass',
+  name: import.meta.env.VITE_REMOTE_WS_URL ? 'Production' : 'Local Dev'
 });
 
 const isSettingsOpen = ref(false);
@@ -57,13 +57,13 @@ const isLocalhost = (ip: string) => {
 };
 
 onMounted(() => {
-  if (serverIp.value && isLocalhost(serverIp.value)) {
+  if (serverIp.value) {
     startMonitoring(serverIp.value);
   }
 });
 
 watch(serverIp, (newIp) => {
-  if (newIp && isLocalhost(newIp)) {
+  if (newIp) {
     startMonitoring(newIp);
   } else {
     stopMonitoring();

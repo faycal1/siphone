@@ -15,8 +15,15 @@ export function useAdmin() {
   let isActive = false;
 
   const fetchStats = async (baseIp: string) => {
-    const baseUrl = `http://${baseIp}:8088/ari`;
-    const apiKey = 'admin:adminpass';
+    const isRemote = baseIp !== 'localhost' && !baseIp.startsWith('127.');
+    const isSecure = window.location.protocol === 'https:' || isRemote;
+    const port = isSecure ? '8089' : '8088';
+    const protocol = isSecure ? 'https' : 'http';
+    const baseUrl = `${protocol}://${baseIp}:${port}/ari`;
+
+    const user = import.meta.env.VITE_ARI_USER || 'callme';
+    const pass = import.meta.env.VITE_ARI_PASS || 'callme';
+    const apiKey = `${user}:${pass}`;
 
     try {
       const [channelsRes, endpointsRes] = await Promise.all([
@@ -47,8 +54,19 @@ export function useAdmin() {
 
     if (!isActive) return;
 
-    const apiKey = 'admin:adminpass';
-    const wsUrl = `ws://${baseIp}:8088/ari/events?api_key=${apiKey}&app=softphone_monitor&subscribeAll=true`;
+    // Force secure protocols for remote domains or if the page is HTTPS
+    const isRemote = baseIp !== 'localhost' && !baseIp.startsWith('127.');
+    const isSecure = window.location.protocol === 'https:' || isRemote;
+    
+    const protocol = isSecure ? 'wss' : 'ws';
+    const port = isSecure ? '8089' : '8088';
+    
+    const user = import.meta.env.VITE_ARI_USER || 'callme';
+    const pass = import.meta.env.VITE_ARI_PASS || 'callme';
+    const apiKey = `${user}:${pass}`;
+    
+    const wsUrl = `${protocol}://${baseIp}:${port}/ari/events?api_key=${apiKey}&app=softphone_monitor&subscribeAll=true`;
+    console.log(`[ARI] Attempting connection to: ${wsUrl}`);
 
     try {
       socket = new WebSocket(wsUrl);
