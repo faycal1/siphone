@@ -108,5 +108,43 @@ force_rport=yes
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/registrations', methods=['GET'])
+def get_registrations():
+    try:
+        # Execute Asterisk CLI command
+        result = subprocess.run(
+            ["docker", "exec", "asterisk", "asterisk", "-rx", "pjsip show registrations"],
+            capture_output=True, text=True, check=True
+        )
+        
+        output = result.stdout
+        registrations = []
+        
+        if "No objects found" in output:
+            return jsonify([]), 200
+
+        # Regex to match the registration lines
+        # Example line:  mytrunk/sip:sip.example.com:5060     mytrunk_auth      Registered
+        lines = output.splitlines()
+        for line in lines:
+            line = line.strip()
+            # Skip headers and empty lines
+            if not line or "Registration/ServerURI" in line or "===" in line or "Objects found" in line:
+                continue
+            
+            # Simple column parsing (split by whitespace)
+            parts = re.split(r'\s{2,}', line)
+            if len(parts) >= 3:
+                registrations.append({
+                    "resource": parts[0],
+                    "server_uri": parts[1],
+                    "status": parts[2]
+                })
+
+        return jsonify(registrations), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
