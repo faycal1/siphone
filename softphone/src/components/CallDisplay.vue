@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Mic, MicOff, PhoneOff, Phone, User, Volume2, ShieldCheck, LayoutGrid, X, Delete, Activity, Wifi, Zap } from 'lucide-vue-next';
+import { Mic, MicOff, PhoneOff, Phone, User, Volume2, ShieldCheck, LayoutGrid, X, Delete, Activity, Zap } from 'lucide-vue-next';
 import { ref, computed, watch, onUnmounted } from 'vue';
 
 const props = defineProps({

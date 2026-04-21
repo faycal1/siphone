@@ -30,7 +30,10 @@ const presets = [
     name: 'Local Dev',
     wsUrl: 'ws://127.0.0.1:8088/ws',
     extension: '101',
-    password: '101pass'
+    password: '101pass',
+    turnUrl: '',
+    turnUser: '',
+    turnPass: ''
   },
   {
     name: 'CSC360 Demo',

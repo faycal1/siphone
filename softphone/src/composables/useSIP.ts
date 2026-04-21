@@ -166,11 +166,12 @@ export function useSIP() {
 
       // Add TURN if provided
       if (config.turnUrl) {
-        configuration.pcConfig.iceServers.push({
+        const turnServer: any = {
           urls: [config.turnUrl],
           username: config.turnUser,
           credential: config.turnPass
-        });
+        };
+        configuration.pcConfig.iceServers.push(turnServer);
         sysLog(`TURN Relay Configured: ${config.turnUrl}`, LogLevel.INFO);
       }
 
