@@ -78,14 +78,14 @@ const handleForceAudio = () => {
     <!-- Avatar Identity HUD -->
     <div class="relative z-10 group">
       <div :class="[
-        'w-36 h-36 rounded-full border-[6px] border-white/5 p-1 transition-all duration-500',
+        'w-36 h-36 rounded-full border-[6px] border-[var(--border-main)] p-1 transition-all duration-500',
         currentCall.status === 'In Call' ? 'shadow-[0_0_50px_0_rgba(16,185,129,0.3)] bg-accent/10 border-accent/30 scale-105' : 'bg-primary/10 border-primary/30 scale-100'
       ]">
         <div class="w-full h-full rounded-full bg-card overflow-hidden flex flex-col items-center justify-center relative shadow-inner">
           <User :class="['w-16 h-16 transition-colors', currentCall.status === 'In Call' ? 'text-accent' : 'text-primary']" />
           <div class="mt-2 flex flex-col items-center gap-2">
             <!-- Current SIP Status -->
-            <div class="text-[10px] uppercase tracking-widest text-white/60 font-bold">
+            <div class="text-[10px] uppercase tracking-widest text-text-muted font-bold">
               {{ currentCall.status }}
             </div>
 
@@ -108,7 +108,7 @@ const handleForceAudio = () => {
               Force Audio Start
             </button>
 
-            <div v-if="currentCall.remoteStream" class="mt-1 text-[10px] text-white/40">
+            <div v-if="currentCall.remoteStream" class="mt-1 text-[10px] text-text-muted">
               Tracks: {{ currentCall.remoteStream.getTracks().length }} | Active: {{ currentCall.remoteStream.active }}
             </div>
           </div>
@@ -116,7 +116,7 @@ const handleForceAudio = () => {
       </div>
       
       <!-- Security Badge Overlay -->
-      <div class="absolute -top-1 -right-1 bg-background/80 backdrop-blur-md p-2 rounded-full border border-white/10 shadow-lg">
+      <div class="absolute -top-1 -right-1 bg-background/80 backdrop-blur-md p-2 rounded-full border border-[var(--border-main)] shadow-lg">
         <ShieldCheck class="w-3.5 h-3.5 text-accent" />
       </div>
 
@@ -124,12 +124,12 @@ const handleForceAudio = () => {
       <div class="flex items-center gap-6 relative z-10">
         <!-- Option Buttons (Mute/Speaker) -->
         <div class="flex gap-4">
-          <div @click="toggleMute" class="bg-card/80 backdrop-blur-md p-4 rounded-full border border-white/10 cursor-pointer hover:bg-white/10 transition-all hover:scale-110 shadow-xl group/btn">
-            <Mic v-if="!isMuted" class="w-5 h-5 text-white/60 group-hover/btn:text-white transition-colors" />
+          <div @click="toggleMute" class="bg-card/80 backdrop-blur-md p-4 rounded-full border border-[var(--border-main)] cursor-pointer hover:bg-[var(--bg-glass-hover)] transition-all hover:scale-110 shadow-xl group/btn">
+            <Mic v-if="!isMuted" class="w-5 h-5 text-text-muted group-hover/btn:text-text transition-colors" />
             <MicOff v-else class="w-5 h-5 text-rose-500" />
           </div>
-          <div class="bg-card/80 backdrop-blur-md p-4 rounded-full border border-white/10 cursor-pointer hover:bg-white/10 transition-all hover:scale-110 shadow-xl group/btn">
-            <Volume2 class="w-5 h-5 text-white/60 group-hover/btn:text-white transition-colors" />
+          <div class="bg-card/80 backdrop-blur-md p-4 rounded-full border border-[var(--border-main)] cursor-pointer hover:bg-[var(--bg-glass-hover)] transition-all hover:scale-110 shadow-xl group/btn">
+            <Volume2 class="w-5 h-5 text-text-muted group-hover/btn:text-text transition-colors" />
           </div>
         </div>
         
@@ -142,22 +142,22 @@ const handleForceAudio = () => {
         </button>
 
         <!-- Keypad Trigger -->
-        <div @click="isKeypadOpen = !isKeypadOpen" class="bg-card/80 backdrop-blur-md p-4 rounded-full border border-white/10 cursor-pointer hover:bg-white/10 transition-all hover:scale-110 shadow-xl group/btn">
-          <LayoutGrid class="w-5 h-5 text-white/60 group-hover/btn:text-white transition-colors" />
+        <div @click="isKeypadOpen = !isKeypadOpen" class="bg-card/80 backdrop-blur-md p-4 rounded-full border border-[var(--border-main)] cursor-pointer hover:bg-[var(--bg-glass-hover)] transition-all hover:scale-110 shadow-xl group/btn">
+          <LayoutGrid class="w-5 h-5 text-text-muted group-hover/btn:text-text transition-colors" />
         </div>
       </div>
     </div>
     
     <!-- Identity Info -->
     <div class="text-center w-full relative z-10">
-      <h2 class="text-3xl font-light text-white tracking-tight truncate max-w-[320px] mx-auto transition-transform duration-500" :class="currentCall.status === 'In Call' ? 'scale-110 translate-y-2' : ''">
+      <h2 class="text-3xl font-light text-text tracking-tight truncate max-w-[320px] mx-auto transition-transform duration-500" :class="currentCall.status === 'In Call' ? 'scale-110 translate-y-2' : ''">
         {{ currentCall.remoteIdentity }}
       </h2>
       <div class="flex items-center justify-center gap-2 mt-4">
         <div class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></div>
         <p class="text-[10px] font-black text-accent uppercase tracking-[0.3em] ml-1">{{ currentCall.status === 'In Call' ? 'Secure Stream' : currentCall.status }}</p>
       </div>
-      <p class="text-5xl font-extralight text-white/90 mt-10 tabular-nums tracking-tighter opacity-80">{{ formattedDuration }}</p>
+      <p class="text-5xl font-extralight text-text mt-10 tabular-nums tracking-tighter opacity-80">{{ formattedDuration }}</p>
     </div>
 
     <!-- Primary Controls -->
@@ -189,16 +189,16 @@ const handleForceAudio = () => {
 
     <!-- Keypad Overlay -->
     <Transition name="overlay-fade">
-      <div v-if="isKeypadOpen" class="absolute inset-0 z-50 bg-[#0B0F19]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 rounded-[48px]">
-        <button @click="isKeypadOpen = false" class="absolute top-10 right-10 p-4 text-white/40 hover:text-white transition-colors">
+      <div v-if="isKeypadOpen" class="absolute inset-0 z-50 bg-background/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 rounded-[48px]">
+        <button @click="isKeypadOpen = false" class="absolute top-10 right-10 p-4 text-text-muted hover:text-text transition-colors">
           <X class="w-8 h-8" />
         </button>
         
         <div class="text-center mb-12">
           <h3 class="text-xs font-black uppercase tracking-[0.4em] text-accent mb-2">Dial Pad</h3>
           <div class="h-10 flex items-center justify-center">
-            <span class="text-3xl font-light text-white tracking-[0.2em] animate-in fade-in zoom-in duration-300">{{ dtmfSequence }}</span>
-            <span v-if="!dtmfSequence" class="text-white/20 text-[10px] uppercase tracking-widest">Awaiting Input</span>
+            <span class="text-3xl font-light text-text tracking-[0.2em] animate-in fade-in zoom-in duration-300">{{ dtmfSequence }}</span>
+            <span v-if="!dtmfSequence" class="text-text-muted text-[10px] uppercase tracking-widest">Awaiting Input</span>
           </div>
         </div>
 
@@ -206,7 +206,7 @@ const handleForceAudio = () => {
           <button v-for="num in ['1','2','3','4','5','6','7','8','9','*','0','#']" 
                   :key="num" 
                   @click="() => { dtmfSequence += num; emit('dtmf', num); }"
-                  class="w-16 h-16 rounded-full flex items-center justify-center text-xl font-light bg-white/[0.03] border border-white/5 shadow-inner transition-all duration-300 hover:bg-accent/20 hover:border-accent/40 active:scale-95 text-white"
+                  class="w-16 h-16 rounded-full flex items-center justify-center text-xl font-light bg-card border border-[var(--border-main)] shadow-inner transition-all duration-300 hover:bg-accent/20 hover:border-accent/40 active:scale-95 text-text"
           >
             {{ num }}
           </button>
@@ -217,7 +217,7 @@ const handleForceAudio = () => {
           <button 
             @click="dtmfSequence = dtmfSequence.slice(0, -1)"
             v-if="dtmfSequence"
-            class="w-16 h-16 rounded-full flex items-center justify-center bg-white/[0.02] border border-white/5 shadow-inner transition-all duration-300 hover:bg-rose-500/20 hover:border-rose-500/40 active:scale-95 text-white/40 hover:text-rose-500 animate-in fade-in scale-in duration-300"
+            class="w-16 h-16 rounded-full flex items-center justify-center bg-card border border-[var(--border-main)] shadow-inner transition-all duration-300 hover:bg-rose-500/20 hover:border-rose-500/40 active:scale-95 text-text-muted hover:text-rose-500 animate-in fade-in scale-in duration-300"
             title="Backspace"
           >
             <Delete class="w-6 h-6" />

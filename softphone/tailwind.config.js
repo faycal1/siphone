@@ -7,11 +7,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#0B0F19',
-        card: '#161B22',
-        primary: '#38BDF8',
-        secondary: '#0EA5E9',
-        accent: '#F43F5E',
+        background: 'var(--bg-main)',
+        card: 'var(--bg-card)',
+        primary: 'var(--primary)',
+        accent: 'var(--accent)',
+        text: 'var(--text-main)',
+        'text-muted': 'var(--text-muted)',
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
