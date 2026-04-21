@@ -16,12 +16,12 @@ export function useSIP() {
   const ua = shallowRef<JsSIP.UA | null>(null);
   const session = shallowRef<any>(null);
   const remoteAudio = markRaw(new Audio());
-  
+
   remoteAudio.autoplay = true;
   remoteAudio.hidden = true;
-  
+
   const sounds = useSounds();
-  
+
   const state = reactive({
     isConnected: false,
     isRegistered: false,
@@ -66,10 +66,10 @@ export function useSIP() {
     try {
       state.activePreset = config.name || 'Custom';
       sysLog(`Connecting to ${config.wsUrl}... (${state.activePreset})`, LogLevel.INFO);
-      
+
       // WARM UP AUDIO
       sounds.unlockAudio();
-      remoteAudio.play().catch(() => {}); // Prime the global sink
+      remoteAudio.play().catch(() => { }); // Prime the global sink
 
       // Pre-request permissions to avoid "reload" issue (Safety check for insecure contexts)
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -79,7 +79,7 @@ export function useSIP() {
       } else {
         sysLog('WebRTC Error: Security context missing. Modern browsers require HTTPS for microphone access.', LogLevel.ERROR, 'error');
       }
-      
+
       let domain = '127.0.0.1';
       try {
         const url = new URL(config.wsUrl);
@@ -89,7 +89,7 @@ export function useSIP() {
       }
 
       socket.value = markRaw(new JsSIP.WebSocketInterface(config.wsUrl));
-      
+
       // Optimization: Force transport=wss if using a secure websocket
       const transportSuffix = config.wsUrl.startsWith('wss') ? ';transport=wss' : '';
 
@@ -164,7 +164,7 @@ export function useSIP() {
         const handlePC = (pc: RTCPeerConnection) => {
           if ((pc as any)._captured) return;
           (pc as any)._captured = true;
-          
+
           sysLog('WebRTC PeerConnection Active', LogLevel.DEBUG, 'success');
 
           pc.ontrack = (event: RTCTrackEvent) => {
@@ -174,11 +174,11 @@ export function useSIP() {
               if (!stream || !(stream instanceof MediaStream)) stream = new MediaStream();
               stream.addTrack(event.track);
               state.currentCall.remoteStream = markRaw(stream);
-              
+
               // Direct attachment to global sink
               remoteAudio.srcObject = state.currentCall.remoteStream;
               remoteAudio.play().catch(e => console.warn('Global playback failed:', e));
-              
+
               sysLog(`Track attached to global sink`, LogLevel.DEBUG, 'success');
             }
           };
@@ -217,13 +217,13 @@ export function useSIP() {
         newSession.on('sdp', (data: { sdp: string; originator: string; type: string }) => {
           const hasIce = data.sdp.includes('ice-pwd');
           const hasDtls = data.sdp.includes('fingerprint');
-          console.log(`SDP ${data.type} hasIce:${hasIce} hasDtls:${hasDtls}`);
+          //console.log(`SDP ${data.type} hasIce:${hasIce} hasDtls:${hasDtls}`);
           sysLog(`SDP ${data.type}: ICE=${hasIce ? 'OK' : 'MISSING'} DTLS=${hasDtls ? 'OK' : 'MISSING'}`, LogLevel.DEBUG, 'info');
         });
 
         // Additional fallback for stream events
         newSession.on('addstream', (e: any) => {
-          console.log('Legacy addstream event:', e.stream.id);
+          //console.log('Legacy addstream event:', e.stream.id);
           if (state.currentCall && !state.currentCall.remoteStream) {
             state.currentCall.remoteStream = markRaw(e.stream);
             sysLog('Stream Added (Legacy)', LogLevel.DEBUG, 'success');
@@ -231,7 +231,7 @@ export function useSIP() {
         });
 
         newSession.on('track', (e: any) => {
-          console.log('Session track event:', e.track.kind);
+          //console.log('Session track event:', e.track.kind);
           if (state.currentCall && e.track.kind === 'audio') {
             if (!state.currentCall.remoteStream) {
               state.currentCall.remoteStream = markRaw(new MediaStream());
@@ -268,7 +268,7 @@ export function useSIP() {
           }
           sysLog('Call Live', LogLevel.NOTICE, 'success');
         });
-        
+
         newSession.on('failed', (e: any) => {
           sounds.stopAll();
           sounds.playBusyTone();
@@ -315,13 +315,13 @@ export function useSIP() {
     if (!window.isSecureContext) {
       addLog('Insecure Context: WebRTC is disabled by browser. Use localhost or HTTPS.', 'error');
     }
-    
+
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       addLog('MediaDevices API not available. Check browser permissions.', 'error');
     }
 
     addLog(`Initiating call to ${target}...`);
-    
+
     const options = {
       mediaConstraints: { audio: audioConstraints, video: false },
       pcConfig: (ua.value as any).configuration.pcConfig,
