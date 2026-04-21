@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Activity, Users, Globe, RefreshCw, AlertCircle, Plus, ShieldCheck } from 'lucide-vue-next';
+import { Activity, Users, Globe, RefreshCw, AlertCircle, Plus } from 'lucide-vue-next';
 import { useAdmin } from '../composables/useAdmin';
 import { onMounted, watch, ref } from 'vue';
 

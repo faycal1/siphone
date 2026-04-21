@@ -2,12 +2,14 @@ import { reactive, shallowRef, markRaw } from 'vue';
 import * as JsSIP from 'jssip';
 import { useSounds } from './useSounds';
 
-export enum LogLevel {
-  DEBUG = 0,
-  INFO = 1,
-  NOTICE = 2,
-  ERROR = 3
-}
+export const LogLevel = {
+  DEBUG: 0,
+  INFO: 1,
+  NOTICE: 2,
+  ERROR: 3
+} as const;
+
+export type LogLevel = typeof LogLevel[keyof typeof LogLevel];
 
 export function useSIP() {
   const socket = shallowRef<any>(null);
@@ -18,7 +20,7 @@ export function useSIP() {
   remoteAudio.autoplay = true;
   remoteAudio.hidden = true;
   
-  const { playRingtone, playDialTone, playBusyTone, stopAll } = useSounds();
+  const sounds = useSounds();
   
   const state = reactive({
     isConnected: false,
@@ -35,7 +37,6 @@ export function useSIP() {
     logs: [] as { time: string; msg: string; type: 'info' | 'error' | 'success'; level: LogLevel }[],
   });
 
-  const sounds = useSounds();
 
   const sysLog = (msg: string, level: LogLevel = LogLevel.INFO, type: 'info' | 'error' | 'success' = 'info') => {
     // Filter out DEBUG logs in Demo mode
@@ -304,7 +305,7 @@ export function useSIP() {
     }
 
     // Extract domain from UA configuration for consistency
-    const domain = (ua.value.configuration.uri as any).host;
+    const domain = ((ua.value as any).configuration.uri as any).host;
 
     // Check Browser Secure Context & Media Capabilities
     if (!window.isSecureContext) {
@@ -319,12 +320,12 @@ export function useSIP() {
     
     const options = {
       mediaConstraints: { audio: audioConstraints, video: false },
-      pcConfig: ua.value.configuration.pcConfig,
+      pcConfig: (ua.value as any).configuration.pcConfig,
       rtcConstraints: { 'optional': [{ 'DtlsSrtpKeyAgreement': 'true' }] }
     };
 
     try {
-      const outgoingSession = ua.value.call(`sip:${target}@${domain}`, options);
+      ua.value.call(`sip:${target}@${domain}`, options);
       addLog('SDP Offer generated', 'info');
     } catch (e: any) {
       addLog(`Failed to create call: ${e.message}`, 'error');
@@ -335,13 +336,13 @@ export function useSIP() {
   const terminateCall = () => {
     if (session.value) {
       session.value.terminate();
-      stopAll();
+      sounds.stopAll();
     }
   };
 
   const answerCall = () => {
     if (session.value && state.currentCall?.isIncoming) {
-      stopAll();
+      sounds.stopAll();
       session.value.answer({
         mediaConstraints: { audio: audioConstraints, video: false }
       });
