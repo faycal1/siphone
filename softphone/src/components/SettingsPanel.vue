@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { X, Settings, User, Lock, Globe, Eye, EyeOff } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 
 const props = defineProps<{
   config: {
