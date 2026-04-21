@@ -49,7 +49,7 @@ export function useSounds() {
       alertTone.pause();
       alertTone.currentTime = 0;
       alertTone.volume = 1.0;
-      console.log('Audio engine unlocked/warmed up');
+      //console.log('Audio engine unlocked/warmed up');
     } catch (e) {
       console.warn('Audio unlock failed:', e);
     }

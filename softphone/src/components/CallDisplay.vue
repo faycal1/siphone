@@ -55,7 +55,7 @@ const toggleMute = () => {
 // (Handled globally by useSIP.ts to prevent race conditions on extension 600)
 
 const handleForceAudio = () => {
-  console.log('Manual Audio Kickstart requested');
+  //console.log('Manual Audio Kickstart requested');
   if (props.currentCall.remoteStream) {
     // Attempting to play the stream via the browser's global media interface
     // which useSIP's global element is currently processing
