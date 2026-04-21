@@ -143,68 +143,71 @@ const handleForceAudio = () => {
         <ShieldCheck class="w-3.5 h-3.5 text-accent" />
       </div>
 
-      <!-- NEW: Unified Command Dock (Refined Size) -->
-        <div class="flex items-center gap-4 px-5 py-3 rounded-[3rem] bg-card/30 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-in slide-in-from-bottom-6 duration-700">
-          
-          <!-- Left Wing: Media & Input -->
-          <div class="flex gap-2.5">
-            <!-- Mute Toggle -->
-            <div 
-              @click="toggleMute" 
-              :class="[
-                'p-3 rounded-full border transition-all duration-300 cursor-pointer hover:scale-110 active:scale-95 group/btn',
-                isMuted ? 'bg-rose-500/20 border-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'
-              ]"
-            >
-              <Mic v-if="!isMuted" class="w-4 h-4 text-white/50 group-hover/btn:text-white transition-colors" />
-              <MicOff v-else class="w-4 h-4 text-rose-500 animate-pulse" />
-            </div>
-
-            <!-- Keypad Toggle -->
-            <div 
-              @click="isKeypadOpen = !isKeypadOpen" 
-              :class="[
-                'p-3 rounded-full border transition-all duration-300 cursor-pointer hover:scale-110 active:scale-95 group/btn',
-                isKeypadOpen ? 'bg-primary/20 border-primary/40 shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'
-              ]"
-            >
-              <LayoutGrid class="w-4 h-4 text-white/50 group-hover/btn:text-white transition-colors" />
-            </div>
+    <!-- Controls Layout -->
+    <div v-if="currentCall.status !== 'Incoming'" class="absolute inset-x-0 bottom-12 z-20 px-8 flex flex-col items-center gap-12">
+      <!-- Unified Command Dock (Extra Compact Size) -->
+      <div class="flex items-center gap-3 px-4 py-2.5 rounded-[3rem] bg-card/30 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-in slide-in-from-bottom-6 duration-700">
+        
+        <!-- Left Wing: Media & Input -->
+        <div class="flex gap-2">
+          <!-- Mute Toggle -->
+          <div 
+            @click="toggleMute" 
+            :class="[
+              'p-2.5 rounded-full border transition-all duration-300 cursor-pointer hover:scale-110 active:scale-95 group/btn',
+              isMuted ? 'bg-rose-500/20 border-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'
+            ]"
+          >
+            <Mic v-if="!isMuted" class="w-3.5 h-3.5 text-white/50 group-hover/btn:text-white transition-colors" />
+            <MicOff v-else class="w-3.5 h-3.5 text-rose-500 animate-pulse" />
           </div>
 
-          <!-- Center: Primary Action (Hangup) -->
-          <button 
-            @click="emit('hangup')"
-            class="mx-1 bg-rose-500 p-4 rounded-full shadow-[0_0_25px_rgba(244,63,94,0.4)] hover:shadow-[0_0_40px_rgba(244,63,94,0.6)] hover:scale-110 active:scale-90 transition-all group/hangup"
+          <!-- Keypad Toggle -->
+          <div 
+            @click="isKeypadOpen = !isKeypadOpen" 
+            :class="[
+              'p-2.5 rounded-full border transition-all duration-300 cursor-pointer hover:scale-110 active:scale-95 group/btn',
+              isKeypadOpen ? 'bg-primary/20 border-primary/40 shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'
+            ]"
           >
-            <PhoneOff class="w-6 h-6 text-white rotate-[135deg] group-hover/hangup:scale-110 transition-transform" />
-          </button>
-
-          <!-- Right Wing: Call Management -->
-          <div class="flex gap-2.5">
-            <!-- Hold/Unhold -->
-            <div 
-              v-if="currentCall.status === 'In Call' || currentCall.status === 'On Hold'"
-              @click="currentCall.status === 'On Hold' ? emit('unhold') : emit('hold')" 
-              :class="[
-                'p-3 rounded-full border transition-all duration-300 cursor-pointer hover:scale-110 active:scale-95 group/btn',
-                currentCall.status === 'On Hold' ? 'bg-amber-500/20 border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'
-              ]"
-            >
-              <Pause v-if="currentCall.status === 'In Call'" class="w-4 h-4 text-white/50 group-hover/btn:text-white transition-colors" />
-              <Play v-else class="w-4 h-4 text-amber-500 animate-pulse" />
-            </div>
-
-            <!-- Transfer Dialog -->
-            <div 
-              v-if="currentCall.status === 'In Call'"
-              @click="isTransferOpen = true" 
-              class="bg-white/5 border border-white/10 p-3 rounded-full cursor-pointer hover:bg-white/10 hover:scale-110 active:scale-95 transition-all shadow-xl group/btn"
-            >
-              <ArrowRightLeft class="w-4 h-4 text-white/50 group-hover/btn:text-white transition-colors" />
-            </div>
+            <LayoutGrid class="w-3.5 h-3.5 text-white/50 group-hover/btn:text-white transition-colors" />
           </div>
         </div>
+
+        <!-- Center: Primary Action (Hangup) -->
+        <button 
+          @click="emit('hangup')"
+          class="mx-0.5 bg-rose-500 p-3.5 rounded-full shadow-[0_0_20px_rgba(244,63,94,0.4)] hover:shadow-[0_0_35px_rgba(244,63,94,0.6)] hover:scale-110 active:scale-90 transition-all group/hangup"
+        >
+          <PhoneOff class="w-5 h-5 text-white rotate-[135deg] group-hover/hangup:scale-110 transition-transform" />
+        </button>
+
+        <!-- Right Wing: Call Management -->
+        <div class="flex gap-2">
+          <!-- Hold/Unhold -->
+          <div 
+            v-if="currentCall.status === 'In Call' || currentCall.status === 'On Hold'"
+            @click="currentCall.status === 'On Hold' ? emit('unhold') : emit('hold')" 
+            :class="[
+              'p-2.5 rounded-full border transition-all duration-300 cursor-pointer hover:scale-110 active:scale-95 group/btn',
+              currentCall.status === 'On Hold' ? 'bg-amber-500/20 border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'
+            ]"
+          >
+            <Pause v-if="currentCall.status === 'In Call'" class="w-3.5 h-3.5 text-white/50 group-hover/btn:text-white transition-colors" />
+            <Play v-else class="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+          </div>
+
+          <!-- Transfer Dialog -->
+          <div 
+            v-if="currentCall.status === 'In Call'"
+            @click="isTransferOpen = true" 
+            class="bg-white/5 border border-white/10 p-2.5 rounded-full cursor-pointer hover:bg-white/10 hover:scale-110 active:scale-95 transition-all shadow-xl group/btn"
+          >
+            <ArrowRightLeft class="w-3.5 h-3.5 text-white/50 group-hover/btn:text-white transition-colors" />
+          </div>
+        </div>
+      </div>
+    </div>
     </div>
     
     <!-- Identity Info -->
