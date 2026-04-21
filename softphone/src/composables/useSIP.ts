@@ -71,10 +71,14 @@ export function useSIP() {
       sounds.unlockAudio();
       remoteAudio.play().catch(() => {}); // Prime the global sink
 
-      // Pre-request permissions to avoid "reload" issue
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(() => sysLog('Microphone permission granted', LogLevel.INFO, 'success'))
-        .catch((e) => sysLog(`Microphone permission denied: ${e.message}`, LogLevel.ERROR, 'error'));
+      // Pre-request permissions to avoid "reload" issue (Safety check for insecure contexts)
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(() => sysLog('Microphone permission granted', LogLevel.INFO, 'success'))
+          .catch((e) => sysLog(`Microphone permission denied: ${e.message}`, LogLevel.ERROR, 'error'));
+      } else {
+        sysLog('WebRTC Error: Security context missing. Modern browsers require HTTPS for microphone access.', LogLevel.ERROR, 'error');
+      }
       
       let domain = '127.0.0.1';
       try {
