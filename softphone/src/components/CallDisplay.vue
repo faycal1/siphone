@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Mic, MicOff, PhoneOff, Phone, User, Volume2, ShieldCheck, LayoutGrid, X, Delete } from 'lucide-vue-next';
+import { Mic, MicOff, PhoneOff, Phone, User, Volume2, ShieldCheck, LayoutGrid, X, Delete, Activity, Wifi, Zap } from 'lucide-vue-next';
 import { ref, computed, watch, onUnmounted } from 'vue';
 
 const props = defineProps({
@@ -149,7 +149,70 @@ const handleForceAudio = () => {
     </div>
     
     <!-- Identity Info -->
-    <div class="text-center w-full relative z-10">
+    <div class="text-center w-full relative z-10 flex flex-col items-center">
+      
+      <!-- QoS / Network Health HUD -->
+      <Transition name="fade">
+        <div v-if="currentCall.status === 'In Call' && currentCall.qos" class="mb-6 flex flex-col items-center gap-2">
+          <div :class="[
+            'px-4 py-2 rounded-2xl border backdrop-blur-md flex items-center gap-4 transition-all duration-500 shadow-lg',
+            currentCall.qos.health === 'excellent' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+            currentCall.qos.health === 'good' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' :
+            currentCall.qos.health === 'fair' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' :
+            'bg-rose-500/10 border-rose-500/20 text-rose-400'
+          ]">
+            <!-- Signal Bars (Wow Factor) -->
+            <div class="flex items-end gap-0.5 h-3">
+              <div v-for="i in 4" :key="i" :class="[
+                'w-1 rounded-full transition-all duration-500',
+                i === 1 ? 'h-1' : i === 2 ? 'h-1.5' : i === 3 ? 'h-2' : 'h-3',
+                (
+                  (currentCall.qos.health === 'excellent' && i <= 4) ||
+                  (currentCall.qos.health === 'good' && i <= 3) ||
+                  (currentCall.qos.health === 'fair' && i <= 2) ||
+                  (currentCall.qos.health === 'poor' && i <= 1)
+                ) ? 'bg-current shadow-[0_0_8px_currentColor]' : 'bg-white/10'
+              ]"></div>
+            </div>
+
+            <!-- RTT / Latency -->
+            <div class="flex items-center gap-2 px-3 border-x border-white/5">
+              <Activity class="w-3 h-3 opacity-50" />
+              <div class="flex flex-col items-start leading-none">
+                <span class="text-[8px] uppercase tracking-widest opacity-50 font-bold text-white">Ping</span>
+                <span class="text-xs font-mono font-bold">{{ currentCall.qos.latency }}<span class="text-[8px] ml-0.5 opacity-50">ms</span></span>
+              </div>
+            </div>
+
+            <!-- Jitter -->
+            <div class="flex items-center gap-2">
+              <Zap class="w-3 h-3 opacity-50" />
+              <div class="flex flex-col items-start leading-none">
+                <span class="text-[8px] uppercase tracking-widest opacity-50 font-bold text-white">Jitter</span>
+                <span class="text-xs font-mono font-bold">{{ currentCall.qos.jitter }}<span class="text-[8px] ml-0.5 opacity-50">ms</span></span>
+              </div>
+            </div>
+
+            <!-- Health Badge -->
+            <div :class="[
+              'ml-2 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest',
+              currentCall.qos.health === 'excellent' ? 'bg-emerald-500 text-black' :
+              currentCall.qos.health === 'good' ? 'bg-blue-500 text-black' :
+              currentCall.qos.health === 'fair' ? 'bg-amber-500 text-black' :
+              'bg-rose-500 text-black'
+            ]">
+              {{ currentCall.qos.health }}
+            </div>
+          </div>
+          
+          <!-- Packet Loss Warning -->
+          <div v-if="currentCall.qos.packetsLost > 0" class="flex items-center gap-1.5 animate-in slide-in-from-top-2 duration-300">
+             <div class="w-1 h-1 rounded-full bg-rose-500 animate-pulse"></div>
+             <span class="text-[9px] font-bold text-rose-400 uppercase tracking-widest opacity-80">Lost Packets Detected: {{ currentCall.qos.packetsLost }}</span>
+          </div>
+        </div>
+      </Transition>
+
       <h2 class="text-3xl font-light text-text tracking-tight truncate max-w-[320px] mx-auto transition-transform duration-500" :class="currentCall.status === 'In Call' ? 'scale-110 translate-y-2' : ''">
         {{ currentCall.remoteIdentity }}
       </h2>

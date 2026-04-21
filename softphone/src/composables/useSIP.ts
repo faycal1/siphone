@@ -32,6 +32,12 @@ export function useSIP() {
       isIncoming: boolean;
       localStream?: MediaStream;
       remoteStream?: MediaStream;
+      qos?: {
+        jitter: number;
+        latency: number;
+        packetsLost: number;
+        health: 'excellent' | 'good' | 'fair' | 'poor';
+      };
     } | null,
     activePreset: 'Local Dev',
     logs: [] as { time: string; msg: string; type: 'info' | 'error' | 'success'; level: LogLevel }[],
@@ -61,8 +67,54 @@ export function useSIP() {
     wsUrl: string;
     extension: string;
     password: string;
+    turnUrl?: string;
+    turnUser?: string;
+    turnPass?: string;
     name?: string; // Preset name
   }) => {
+    let qosInterval: any = null;
+
+    const stopQosPolling = () => {
+      if (qosInterval) {
+        clearInterval(qosInterval);
+        qosInterval = null;
+      }
+    };
+
+    const startQosPolling = (pc: RTCPeerConnection) => {
+      stopQosPolling();
+      qosInterval = setInterval(async () => {
+        if (!state.currentCall || pc.iceConnectionState !== 'connected' && pc.iceConnectionState !== 'completed') return;
+
+        try {
+          const stats = await pc.getStats();
+          let jitter = 0;
+          let latency = 0;
+          let packetsLost = 0;
+
+          stats.forEach(report => {
+            if (report.type === 'inbound-rtp' && report.kind === 'audio') {
+              jitter = Math.round((report.jitter || 0) * 1000); // convert to ms
+              packetsLost = report.packetsLost || 0;
+            }
+            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+              latency = Math.round((report.currentRoundTripTime || 0) * 1000); // convert to ms
+            }
+          });
+
+          // Calculate health
+          let health: 'excellent' | 'good' | 'fair' | 'poor' = 'excellent';
+          if (latency > 400 || jitter > 100) health = 'poor';
+          else if (latency > 200 || jitter > 50) health = 'fair';
+          else if (latency > 100 || jitter > 20) health = 'good';
+
+          state.currentCall.qos = { jitter, latency, packetsLost, health };
+        } catch (e) {
+          console.warn('Stats error:', e);
+        }
+      }, 2000);
+    };
+
     try {
       state.activePreset = config.name || 'Custom';
       sysLog(`Connecting to ${config.wsUrl}... (${state.activePreset})`, LogLevel.INFO);
@@ -111,6 +163,16 @@ export function useSIP() {
           iceTransportPolicy: 'all'
         }
       };
+
+      // Add TURN if provided
+      if (config.turnUrl) {
+        configuration.pcConfig.iceServers.push({
+          urls: [config.turnUrl],
+          username: config.turnUser,
+          credential: config.turnPass
+        });
+        sysLog(`TURN Relay Configured: ${config.turnUrl}`, LogLevel.INFO);
+      }
 
       ua.value = markRaw(new JsSIP.UA(configuration));
 
@@ -202,6 +264,10 @@ export function useSIP() {
               } else {
                 state.currentCall.status = 'Establishing Media...';
               }
+
+              if (state_str === 'connected' || state_str === 'completed') {
+                startQosPolling(pc);
+              }
             }
           };
         };
@@ -274,6 +340,7 @@ export function useSIP() {
           sounds.playBusyTone();
           state.currentCall = null;
           session.value = null;
+          stopQosPolling();
           sysLog(`Call Failed: ${e.cause}`, LogLevel.NOTICE, 'error');
         });
 
@@ -281,6 +348,7 @@ export function useSIP() {
           sounds.stopAll();
           state.currentCall = null;
           session.value = null;
+          stopQosPolling();
           sysLog('Call Ended', LogLevel.NOTICE);
         });
       });
