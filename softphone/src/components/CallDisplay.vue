@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { 
-  Mic, MicOff, PhoneOff, Phone, User, Volume2, ShieldCheck, 
-  LayoutGrid, X, Delete, Activity, Zap,
-  ArrowRightLeft, MoveRight, Pause, Play, PhoneForwarded, MessageSquare 
+  Mic, MicOff, PhoneOff, Phone, User, ShieldCheck, 
+  LayoutGrid, X, Activity, Zap,
+  ArrowRightLeft, Pause, Play, PhoneForwarded 
 } from 'lucide-vue-next';
 import { ref, computed, watch, onUnmounted } from 'vue';
 
