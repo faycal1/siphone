@@ -86,7 +86,7 @@ export function useAdmin() {
           socket?.close();
           return;
         }
-        console.log('ARI Event Stream Connected');
+        //console.log('ARI Event Stream Connected');
         stats.isPushActive = true;
         fetchStats(baseIp); // Initial sync
 
@@ -105,7 +105,7 @@ export function useAdmin() {
 
         debounceTimer = setTimeout(() => {
           if (isActive) {
-            console.log(`ARI Sync Triggered by: ${data.type}`);
+            //console.log(`ARI Sync Triggered by: ${data.type}`);
             fetchStats(baseIp);
           }
         }, 500);
