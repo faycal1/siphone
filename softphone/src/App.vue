@@ -154,17 +154,7 @@ const handleLogClick = () => {
 };
 
 // Global activity tracker with backend sync
-watch(() => state.logs[state.logs.length - 1], (newLog) => {
-  if (newLog && newLog.level >= 1) { // INFO or higher
-    // Already tracked by trackActivity in useSIP for primary events, 
-    // but we can add more here if needed.
-  }
-});
-
-// Pass serverIp to trackActivity for backend persistence
-const syncActivity = (msg: string, type: any) => {
-  trackActivity(msg, type, serverIp.value);
-};
+// Primary events are already tracked in useSIP.ts
 </script>
 
 <template>

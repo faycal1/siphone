@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { Phone, Calendar, Activity, Zap, ShieldCheck, Clock, Hash, CheckCircle2 } from 'lucide-vue-next';
+import { computed } from 'vue';
+import { Phone, Calendar, Activity, ShieldCheck, Hash } from 'lucide-vue-next';
 
 const props = defineProps<{
   history: { time: string; msg: string; type: string; date: string }[];
