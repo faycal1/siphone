@@ -53,8 +53,33 @@ export function useSIP() {
     isAutoAnswerEnabled: false,
     activityHistory: [] as { time: string; msg: string; type: 'call' | 'reg' | 'dtmf' | 'system'; date: string }[],
     globalActivityHistory: [] as { time: string; msg: string; type: string; date: string; sip: string }[],
+    ariEndpoints: [] as string[],
     baseIp: '',
   });
+
+  const fetchEndpoints = async () => {
+    if (!state.baseIp) return;
+    try {
+      const ariUser = import.meta.env.VITE_ARI_USER;
+      const ariPass = import.meta.env.VITE_ARI_PASS;
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+      // Port 8088 is default for Asterisk HTTP
+      const url = `${protocol}://${state.baseIp}:8088/ari/endpoints`;
+      
+      const res = await fetch(url, {
+        headers: {
+          'Authorization': 'Basic ' + btoa(ariUser + ":" + ariPass)
+        }
+      });
+      const data = await res.json();
+      // Filter only PJSIP endpoints and extract resource names
+      state.ariEndpoints = data
+        .filter((e: any) => e.technology === 'PJSIP')
+        .map((e: any) => e.resource);
+    } catch (e) {
+      console.error('Failed to fetch ARI endpoints', e);
+    }
+  };
 
   const fetchGlobalActivity = async () => {
     if (!state.baseIp) return;
@@ -496,6 +521,7 @@ export function useSIP() {
       });
 
       fetchGlobalActivity();
+      fetchEndpoints();
       
       ua.value.start();
     } catch (err: any) {
@@ -712,6 +738,7 @@ export function useSIP() {
     cancelAttendedTransfer,
     consultSession,
     trackActivity,
-    fetchGlobalActivity
+    fetchGlobalActivity,
+    fetchEndpoints
   };
 };
