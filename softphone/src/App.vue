@@ -51,7 +51,7 @@ const {
   state, connect, disconnect, makeCall, terminateCall, answerCall, sendDTMF, clearLogs,
   enumerateDevices, setAudioOutput,
   hold, unhold, blindTransfer, startAttendedTransfer, completeAttendedTransfer, cancelAttendedTransfer,
-  consultSession, trackActivity
+  consultSession
 } = useSIP();
 
 // Derived State
