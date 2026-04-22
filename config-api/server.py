@@ -146,6 +146,37 @@ def get_registrations():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/get-endpoints', methods=['GET'])
+def get_endpoints():
+    try:
+        # Execute Asterisk CLI command to get endpoints
+        result = subprocess.run(
+            ["docker", "exec", "asterisk", "asterisk", "-rx", "pjsip show endpoints"],
+            capture_output=True, text=True, check=True
+        )
+        
+        output = result.stdout
+        endpoints = []
+        
+        # Regex to match the endpoint lines
+        # Example:  101/101                                              Not in use    0 of inf
+        lines = output.splitlines()
+        for line in lines:
+            line = line.strip()
+            if not line or "Endpoint:" in line or "===" in line or "Objects found" in line:
+                continue
+            
+            parts = re.split(r'\s+', line)
+            if parts and '/' in parts[0]:
+                resource = parts[0].split('/')[0]
+                if resource not in endpoints:
+                    endpoints.append(resource)
+
+        return jsonify(endpoints), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 import datetime
 
 LOGS_DIR = os.path.join(BASE_DIR, "logs", "daily")
