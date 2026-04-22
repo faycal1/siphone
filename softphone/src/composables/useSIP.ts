@@ -1,4 +1,4 @@
-import { reactive, shallowRef, markRaw } from 'vue';
+import { reactive, shallowRef, markRaw, watch } from 'vue';
 import * as JsSIP from 'jssip';
 import { useSounds } from './useSounds';
 
@@ -59,26 +59,36 @@ export function useSIP() {
   const fetchGlobalActivity = async () => {
     if (!state.baseIp) return;
     const isRemote = state.activePreset === 'CSC360 Demo';
+    const protocol = window.location.protocol === 'https:' || isRemote ? 'https' : 'http';
+    
     const configUrl = isRemote 
       ? import.meta.env.VITE_GET_LOGS_URL_REMOTE 
       : import.meta.env.VITE_GET_LOGS_URL_LOCAL;
 
     const endpoint = configUrl
       ? configUrl.replace('{baseIp}', state.baseIp)
-      : (isRemote ? `https://${state.baseIp}/get_logs.php` : `http://${state.baseIp}:5000/get-activities`);
+      : (isRemote ? `${protocol}://${state.baseIp}/get_logs.php` : `http://${state.baseIp}:5000/get-activities`);
 
     try {
       const resp = await fetch(endpoint);
       const data = await resp.json();
       state.globalActivityHistory = data.history || [];
       
-      // If personal history is empty (refresh), sync from global
-      if (state.activityHistory.length === 0 && ua.value) {
-        const mySip = (ua.value as any).configuration.uri.user;
-        state.activityHistory = state.globalActivityHistory.filter(h => h.sip === mySip) as any[];
-      }
+      // Attempt to sync personal history if we have identity
+      syncPersonalHistory();
     } catch (e) {
       console.error('Failed to fetch activity logs', e);
+    }
+  };
+
+  const syncPersonalHistory = () => {
+    if (ua.value) {
+      const mySip = (ua.value as any).configuration.uri.user;
+      const filtered = state.globalActivityHistory.filter(h => h.sip === mySip);
+      // Only sync if we have no local history yet (initial load/refresh)
+      if (state.activityHistory.length <= 1) {
+        state.activityHistory = filtered as any[];
+      }
     }
   };
 
@@ -672,6 +682,16 @@ export function useSIP() {
     unhold();
     sysLog('Attended Transfer cancelled', LogLevel.NOTICE);
   };
+
+  // Watch for identity to sync history
+  watch(() => ua.value, (newUa) => {
+    if (newUa) syncPersonalHistory();
+  });
+
+  // Watch for global history updates to sync personal
+  watch(() => state.globalActivityHistory, () => {
+    syncPersonalHistory();
+  }, { deep: true });
 
   return {
     state,
