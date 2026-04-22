@@ -71,7 +71,7 @@ export function useSIP() {
 
     // Backend Persistence
     if (state.baseIp && ua.value) {
-      const sip = ua.value.configuration.uri.user;
+      const sip = (ua.value as any).configuration.uri.user;
       const isRemote = state.activePreset === 'CSC360 Demo';
       
       // Determine logging endpoint
