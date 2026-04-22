@@ -6,11 +6,13 @@ import Dialer from './components/Dialer.vue';
 import CallDisplay from './components/CallDisplay.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import AdminDashboard from './components/AdminDashboard.vue';
+import ActivityGraph from './components/ActivityGraph.vue';
 import { useAdmin } from './composables/useAdmin';
-import { Terminal, ShieldCheck, Cpu, RefreshCw, Activity, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { Terminal, ShieldCheck, Cpu, RefreshCw, Activity, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-vue-next';
 
 const showStats = ref(false);
 const showLogs = ref(false);
+const showActivity = ref(false);
 const isDarkMode = ref(true);
 
 // Theme Toggle Logic
@@ -49,7 +51,7 @@ const {
   state, connect, disconnect, makeCall, terminateCall, answerCall, sendDTMF, clearLogs,
   enumerateDevices, setAudioOutput,
   hold, unhold, blindTransfer, startAttendedTransfer, completeAttendedTransfer, cancelAttendedTransfer,
-  consultSession
+  consultSession, trackActivity
 } = useSIP();
 
 // Derived State
@@ -80,6 +82,24 @@ onMounted(() => {
     isDarkMode.value = false;
   }
   updateBodyClass();
+
+  // Load Activity History
+  const savedHistory = localStorage.getItem('sip_activity_history');
+  if (savedHistory) {
+    try {
+      state.activityHistory = JSON.parse(savedHistory);
+    } catch (e) {
+      console.error('Failed to load activity history');
+    }
+  }
+
+  // Hidden Trigger: Keyboard
+  window.addEventListener('keydown', (e) => {
+    if (e.shiftKey && e.key === 'G') {
+      showActivity.value = !showActivity.value;
+      if (showActivity.value) showLogs.value = false;
+    }
+  });
 });
 
 const updateConfig = (newConfig: any) => {
@@ -109,6 +129,41 @@ watch(serverIp, (newIp) => {
 
 const handleCall = (target: string) => {
   makeCall(target);
+};
+
+// Hidden Trigger: Multi-click
+const logClickCount = ref(0);
+let logClickTimer: any = null;
+
+const handleLogClick = () => {
+  showLogs.value = !showLogs.value;
+  if (showLogs.value) showActivity.value = false;
+
+  logClickCount.value++;
+  if (logClickTimer) clearTimeout(logClickTimer);
+  
+  if (logClickCount.value >= 3) {
+    showActivity.value = true;
+    showLogs.value = false;
+    logClickCount.value = 0;
+  } else {
+    logClickTimer = setTimeout(() => {
+      logClickCount.value = 0;
+    }, 500);
+  }
+};
+
+// Global activity tracker with backend sync
+watch(() => state.logs[state.logs.length - 1], (newLog) => {
+  if (newLog && newLog.level >= 1) { // INFO or higher
+    // Already tracked by trackActivity in useSIP for primary events, 
+    // but we can add more here if needed.
+  }
+});
+
+// Pass serverIp to trackActivity for backend persistence
+const syncActivity = (msg: string, type: any) => {
+  trackActivity(msg, type, serverIp.value);
 };
 </script>
 
@@ -161,15 +216,16 @@ const handleCall = (target: string) => {
 
         <!-- Right: Logs -->
         <button 
-          @click="showLogs = !showLogs"
+          @click="handleLogClick"
           class="physical-btn btn-right group"
-          :class="{ 'active': showLogs }"
-          title="Toggle System Logs"
+          :class="{ 'active': showLogs || showActivity }"
+          title="Toggle System Logs (Triple-click for Activity)"
         >
           <div class="btn-texture"></div>
-          <Terminal v-if="!showLogs" class="w-4 h-4 transition-transform group-hover:scale-110" />
+          <Terminal v-if="!showLogs && !showActivity" class="w-4 h-4 transition-transform group-hover:scale-110" />
+          <BarChart3 v-else-if="showActivity" class="w-4 h-4 text-accent transition-transform group-hover:scale-110" />
           <ChevronLeft v-else class="w-4 h-4 transition-transform group-hover:scale-110" />
-          <div class="status-led" :class="{ 'led-on': showLogs, 'led-off': !showLogs }"></div>
+          <div class="status-led" :class="{ 'led-on': showLogs || showActivity, 'led-off': !showLogs && !showActivity, 'led-activity': showActivity }"></div>
         </button>
 
         <!-- Premium Glass Phone Frame -->
@@ -277,6 +333,32 @@ const handleCall = (target: string) => {
               <span>Engine Status</span>
               <span class="text-accent animate-pulse">Live 24/7</span>
             </div>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- Panel 4: Hidden Activity Graph (Replaces or Overlay Logs) -->
+      <Transition name="panel-slide-right">
+        <div v-if="showActivity" class="absolute left-[50%] ml-[230px] w-full max-w-[480px] glass rounded-[3rem] h-[780px] flex flex-col overflow-hidden border-[var(--border-main)] shrink-0 shadow-2xl">
+          <div class="bg-card border-b border-[var(--border-main)] backdrop-blur-xl px-8 py-5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <BarChart3 class="w-4 h-4 text-accent" />
+                <div class="flex flex-col">
+                  <span class="text-[10px] font-black uppercase tracking-[0.4em] text-text">Activity Intelligence</span>
+                  <span class="text-[7px] font-bold text-accent uppercase tracking-widest mt-0.5">Hidden Analytics Mode</span>
+                </div>
+              </div>
+              <button @click="showActivity = false" class="p-2 rounded-full hover:bg-[var(--bg-glass-hover)] text-text-muted">
+                <ChevronLeft class="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <div class="flex-1 px-8 py-8 overflow-hidden">
+            <ActivityGraph :history="state.activityHistory" />
+          </div>
+          <div class="px-8 py-5 border-t border-[var(--border-main)] bg-card/50">
+            <p class="text-[8px] text-center text-text-muted uppercase tracking-[0.3em] font-black">Persisted in logs/daily/{{ config.extension }}_{{ new Date().toISOString().split('T')[0] }}.log</p>
           </div>
         </div>
       </Transition>
@@ -421,6 +503,11 @@ const handleCall = (target: string) => {
 .led-on {
   background: #10b981;
   box-shadow: 0 0 8px #10b981;
+}
+
+.led-activity {
+  background: #6366f1;
+  box-shadow: 0 0 8px #6366f1;
 }
 
 .led-off {
