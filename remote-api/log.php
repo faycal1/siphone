@@ -25,7 +25,17 @@ $time = date("H:i:s");
 // Ensure directory exists
 $logsDir = __DIR__ . "/logs/daily";
 if (!file_exists($logsDir)) {
-    mkdir($logsDir, 0777, true);
+    if (!mkdir($logsDir, 0755, true)) {
+        http_response_code(500);
+        echo json_encode(["error" => "Failed to create directory: $logsDir", "user" => posix_getpwuid(posix_geteuid())['name']]);
+        exit;
+    }
+}
+
+if (!is_writable($logsDir)) {
+    http_response_code(500);
+    echo json_encode(["error" => "Directory is not writable: $logsDir", "user" => posix_getpwuid(posix_geteuid())['name']]);
+    exit;
 }
 
 $filename = "{$sip}_{$date}.log";
@@ -34,9 +44,10 @@ $filePath = "{$logsDir}/{$filename}";
 $logEntry = "[{$time}] [{$type}] {$msg}" . PHP_EOL;
 
 if (file_put_contents($filePath, $logEntry, FILE_APPEND)) {
-    echo json_encode(["status" => "success"]);
+    echo json_encode(["status" => "success", "file" => $filename]);
 } else {
+    $error = error_get_last();
     http_response_code(500);
-    echo json_encode(["error" => "Failed to write log"]);
+    echo json_encode(["error" => "Failed to write log", "details" => $error['message']]);
 }
 ?>
