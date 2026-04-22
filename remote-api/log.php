@@ -22,14 +22,16 @@ $type = strtoupper($data['type'] ?? 'info');
 $date = date("Y-m-d");
 $time = date("H:i:s");
 
-// Ensure directory exists
-$logsDir = __DIR__ . "/logs/daily";
+// Ensure directory exists - moving OUTSIDE of dist to avoid deletion on build
+$logsDir = dirname(__DIR__) . "/logs/daily";
 if (!file_exists($logsDir)) {
     if (!mkdir($logsDir, 0755, true)) {
         http_response_code(500);
         echo json_encode(["error" => "Failed to create directory: $logsDir", "user" => posix_getpwuid(posix_geteuid())['name']]);
         exit;
     }
+    // Auto-create .htaccess for security
+    file_put_contents(dirname($logsDir) . "/.htaccess", "Deny from all");
 }
 
 if (!is_writable($logsDir)) {

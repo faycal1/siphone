@@ -8,4 +8,7 @@ export default defineConfig({
     vue(),
     tailwindcss(),
   ],
+  build: {
+    emptyOutDir: true,
+  }
 })
