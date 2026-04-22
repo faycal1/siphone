@@ -8,16 +8,32 @@ const props = defineProps<{
   onRefreshGlobal?: () => void;
 }>();
 
-const viewMode = ref<'personal' | 'global'>('personal');
+const viewMode = ref<'personal' | 'global' | 'specific'>('personal');
+const selectedSip = ref<string>('');
 
-const activeHistory = computed(() => {
-  return viewMode.value === 'personal' ? props.history : props.globalHistory;
+// Get unique SIPs from global history for the selector
+const availableSips = computed(() => {
+  const sips = new Set(props.globalHistory.map(h => h.sip));
+  return Array.from(sips).sort();
 });
 
-const toggleMode = () => {
-  viewMode.value = viewMode.value === 'personal' ? 'global' : 'personal';
-  if (viewMode.value === 'global' && props.onRefreshGlobal) {
+const activeHistory = computed(() => {
+  if (viewMode.value === 'personal') return props.history;
+  if (viewMode.value === 'global') return props.globalHistory;
+  if (viewMode.value === 'specific') {
+    return props.globalHistory.filter(h => h.sip === selectedSip.value);
+  }
+  return [];
+});
+
+const toggleMode = (mode: 'personal' | 'global' | 'specific') => {
+  viewMode.value = mode;
+  if (mode !== 'personal' && props.onRefreshGlobal) {
     props.onRefreshGlobal();
+  }
+  // Auto-select first SIP if none selected
+  if (mode === 'specific' && !selectedSip.value && availableSips.value.length > 0) {
+    selectedSip.value = availableSips.value[0];
   }
 };
 
@@ -54,11 +70,16 @@ const heatmapData = computed(() => {
       if (count > 5) color = 'bg-emerald-500/40';
       if (count > 10) color = 'bg-emerald-500/70';
       if (count > 20) color = 'bg-emerald-500';
-    } else {
+    } else if (viewMode.value === 'global') {
       if (count > 0) color = 'bg-indigo-500/20';
       if (count > 5) color = 'bg-indigo-500/40';
       if (count > 10) color = 'bg-indigo-500/70';
       if (count > 20) color = 'bg-indigo-500';
+    } else {
+      if (count > 0) color = 'bg-amber-500/20';
+      if (count > 5) color = 'bg-amber-500/40';
+      if (count > 10) color = 'bg-amber-500/70';
+      if (count > 20) color = 'bg-amber-500';
     }
 
     cells.push({ date: dateStr, count, color });
@@ -103,17 +124,44 @@ const getColorClass = (type: string) => {
           <h2 class="text-lg font-bold text-text">Activity Intelligence</h2>
         </div>
         
-        <!-- Toggle Button -->
-        <button 
-          @click="toggleMode"
-          class="flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all duration-300 border"
-          :class="viewMode === 'global' 
-            ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' 
-            : 'bg-white/5 border-[var(--border-main)] text-text-muted hover:bg-white/10'"
+        <!-- Triple Toggle Button -->
+        <div class="flex items-center gap-1 p-1 bg-white/5 rounded-full border border-[var(--border-main)]">
+          <button 
+            @click="toggleMode('personal')"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest transition-all duration-300"
+            :class="viewMode === 'personal' ? 'bg-emerald-500/20 text-emerald-300' : 'text-text-muted hover:bg-white/5'"
+          >
+            <User class="w-3 h-3" />
+            Me
+          </button>
+          <button 
+            @click="toggleMode('global')"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest transition-all duration-300"
+            :class="viewMode === 'global' ? 'bg-indigo-500/20 text-indigo-300' : 'text-text-muted hover:bg-white/5'"
+          >
+            <Globe class="w-3 h-3" />
+            All
+          </button>
+          <button 
+            @click="toggleMode('specific')"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest transition-all duration-300"
+            :class="viewMode === 'specific' ? 'bg-amber-500/20 text-amber-300' : 'text-text-muted hover:bg-white/5'"
+          >
+            <Hash class="w-3 h-3" />
+            SIP
+          </button>
+        </div>
+      </div>
+
+      <!-- SIP Selector (Only in Specific mode) -->
+      <div v-if="viewMode === 'specific'" class="flex items-center gap-3 px-2 animate-fade-in">
+        <span class="text-[9px] font-black text-text-muted uppercase tracking-widest">Target Extension:</span>
+        <select 
+          v-model="selectedSip"
+          class="bg-card border border-[var(--border-main)] rounded-xl px-3 py-1.5 text-[10px] font-bold text-text outline-none focus:border-amber-500/50 transition-all cursor-pointer"
         >
-          <component :is="viewMode === 'global' ? Globe : User" class="w-3 h-3" />
-          {{ viewMode === 'global' ? 'Global Activity' : 'My Activity' }}
-        </button>
+          <option v-for="sip in availableSips" :key="sip" :value="sip">Extension {{ sip }}</option>
+        </select>
       </div>
 
       <div class="grid grid-cols-3 gap-4">
@@ -149,7 +197,7 @@ const getColorClass = (type: string) => {
         <div class="flex items-center gap-2">
           <Calendar class="w-4 h-4 text-primary" />
           <span class="text-[10px] font-black uppercase tracking-widest text-text">
-            {{ viewMode === 'global' ? 'Global' : 'Personal' }} Heatmap
+            {{ viewMode === 'global' ? 'Global' : (viewMode === 'specific' ? `SIP ${selectedSip}` : 'Personal') }} Heatmap
           </span>
         </div>
         <div class="flex items-center gap-1.5">
