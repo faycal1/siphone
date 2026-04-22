@@ -7,7 +7,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-$logsDir = __DIR__ . "/logs/daily";
+// Directory where logs are stored (outside of dist)
+$logsDir = dirname(__DIR__) . '/logs/daily';
 $activities = [];
 
 if (file_exists($logsDir)) {
@@ -51,5 +52,5 @@ usort($activities, function($a, $b) {
 // Limit to 500
 $activities = array_slice($activities, 0, 500);
 
-echo json_encode($activities);
+echo json_encode(["history" => $activities]);
 ?>

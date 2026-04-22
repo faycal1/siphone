@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "postbuild": "mkdir -p dist/logs/daily && cp ../remote-api/*.php dist/ && cp ../remote-api/logs/.htaccess dist/logs/.htaccess",
+    "postbuild": "cp ../remote-api/*.php dist/ && mkdir -p dist/logs && cp ../remote-api/logs/.htaccess dist/logs/.htaccess",
     "preview": "vite preview"
   },
   "dependencies": {

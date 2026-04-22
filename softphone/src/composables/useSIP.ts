@@ -70,9 +70,15 @@ export function useSIP() {
     try {
       const resp = await fetch(endpoint);
       const data = await resp.json();
-      state.globalActivityHistory = data;
+      state.globalActivityHistory = data.history || [];
+      
+      // If personal history is empty (refresh), sync from global
+      if (state.activityHistory.length === 0 && ua.value) {
+        const mySip = (ua.value as any).configuration.uri.user;
+        state.activityHistory = state.globalActivityHistory.filter(h => h.sip === mySip);
+      }
     } catch (e) {
-      console.error('Failed to fetch global activity', e);
+      console.error('Failed to fetch activity logs', e);
     }
   };
 
@@ -479,6 +485,8 @@ export function useSIP() {
         });
       });
 
+      fetchGlobalActivity();
+      
       ua.value.start();
     } catch (err: any) {
       addLog(`Setup Error: ${err.message}`, 'error');
