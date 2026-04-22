@@ -1,0 +1,15 @@
+# Logs
+logs/daily/*.log
+remote-api/logs/daily/*.log
+
+# Environment
+.env
+.env.local
+
+# Node
+node_modules/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db

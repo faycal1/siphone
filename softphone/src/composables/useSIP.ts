@@ -51,7 +51,46 @@ export function useSIP() {
       outputId: 'default'
     },
     isAutoAnswerEnabled: false,
+    activityHistory: [] as { time: string; msg: string; type: 'call' | 'reg' | 'dtmf' | 'system'; date: string }[],
+    baseIp: '',
   });
+
+  const trackActivity = async (msg: string, type: 'call' | 'reg' | 'dtmf' | 'system' = 'system') => {
+    const entry = {
+      time: new Date().toLocaleTimeString(),
+      date: new Date().toISOString().split('T')[0],
+      msg,
+      type
+    };
+    
+    state.activityHistory.unshift(entry);
+    if (state.activityHistory.length > 500) state.activityHistory.pop();
+    
+    // Save to localStorage for frontend persistence
+    localStorage.setItem('sip_activity_history', JSON.stringify(state.activityHistory));
+
+    // Backend Persistence
+    if (state.baseIp && ua.value) {
+      const sip = ua.value.configuration.uri.user;
+      const isRemote = state.activePreset === 'CSC360 Demo';
+      
+      // Determine logging endpoint
+      const protocol = window.location.protocol === 'https:' || isRemote ? 'https' : 'http';
+      const endpoint = isRemote 
+        ? `${protocol}://${state.baseIp}/log.php` // PHP for remote
+        : `http://${state.baseIp}:5000/log-activity`; // Python for local
+        
+      try {
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sip, msg, type })
+        });
+      } catch (e) {
+        // Silent fail for background sync
+      }
+    }
+  };
 
 
   const sysLog = (msg: string, level: LogLevel = LogLevel.INFO, type: 'info' | 'error' | 'success' = 'info') => {
@@ -160,6 +199,12 @@ export function useSIP() {
 
     try {
       state.activePreset = config.name || 'Custom';
+      try {
+        const url = new URL(config.wsUrl);
+        state.baseIp = url.hostname;
+      } catch (e) {
+        state.baseIp = '127.0.0.1';
+      }
       sysLog(`Connecting to ${config.wsUrl}... (${state.activePreset})`, LogLevel.INFO);
 
       // WARM UP AUDIO
@@ -238,6 +283,7 @@ export function useSIP() {
         state.isRegistered = true;
         state.registrationError = '';
         sysLog('Registered with Asterisk', LogLevel.INFO, 'success');
+        trackActivity('SIP Registered successfully', 'reg');
       });
 
       ua.value.on('unregistered', () => {
@@ -250,6 +296,7 @@ export function useSIP() {
         state.registrationError = data.cause;
         const extra = data.response ? ` | Status: ${data.response.status_code}` : '';
         sysLog(`Registration Failed: ${data.cause}${extra}`, LogLevel.ERROR, 'error');
+        trackActivity(`Registration Failed: ${data.cause}`, 'reg');
         console.error('SIP Registration Failed:', data);
       });
 
@@ -262,6 +309,8 @@ export function useSIP() {
           status: data.originator === 'local' ? 'Calling...' : 'Incoming Call...',
           isIncoming: data.originator === 'remote'
         };
+
+        trackActivity(`${data.originator === 'local' ? 'Outbound' : 'Inbound'} Call: ${newSession.remote_identity.uri.user}`, 'call');
 
         if (data.originator === 'remote') {
           sounds.playRingtone();
@@ -395,6 +444,7 @@ export function useSIP() {
           session.value = null;
           stopQosPolling();
           sysLog(`Call Failed: ${e.cause}`, LogLevel.NOTICE, 'error');
+          trackActivity(`Call Failed: ${e.cause}`, 'call');
         });
 
         newSession.on('ended', () => {
@@ -403,6 +453,7 @@ export function useSIP() {
           session.value = null;
           stopQosPolling();
           sysLog('Call Ended', LogLevel.NOTICE);
+          trackActivity('Call Ended', 'call');
         });
       });
 
@@ -495,6 +546,7 @@ export function useSIP() {
         };
         session.value.sendDTMF(tone, options);
         addLog(`DTMF Sent: ${tone}`, 'success');
+        trackActivity(`DTMF Sent: ${tone}`, 'dtmf');
       } catch (err: any) {
         addLog(`DTMF Error: ${err.message}`, 'error');
       }
@@ -526,6 +578,7 @@ export function useSIP() {
       try {
         session.value.refer(target);
         sysLog(`Blind Transfer initiated to: ${target}`, LogLevel.NOTICE, 'success');
+        trackActivity(`Blind Transfer to ${target}`, 'call');
       } catch (err: any) {
         addLog(`Transfer Error: ${err.message}`, 'error');
       }
@@ -607,6 +660,7 @@ export function useSIP() {
     startAttendedTransfer,
     completeAttendedTransfer,
     cancelAttendedTransfer,
-    consultSession
+    consultSession,
+    trackActivity
   };
 };

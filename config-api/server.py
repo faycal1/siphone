@@ -146,5 +146,38 @@ def get_registrations():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+import datetime
+
+LOGS_DIR = os.path.join(BASE_DIR, "logs", "daily")
+
+@app.route('/log-activity', methods=['POST'])
+def log_activity():
+    data = request.json
+    sip = data.get('sip', 'unknown')
+    msg = data.get('msg', '')
+    log_type = data.get('type', 'info')
+    
+    if not msg:
+        return jsonify({"error": "Message is required"}), 400
+
+    try:
+        # Ensure logs directory exists
+        os.makedirs(LOGS_DIR, exist_ok=True)
+        
+        # Filename by SIP and date
+        date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+        filename = f"{sip}_{date_str}.log"
+        file_path = os.path.join(LOGS_DIR, filename)
+        
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+        log_entry = f"[{timestamp}] [{log_type.upper()}] {msg}\n"
+        
+        with open(file_path, "a") as f:
+            f.write(log_entry)
+            
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
