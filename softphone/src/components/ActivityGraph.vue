@@ -1,10 +1,25 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Phone, Calendar, Activity, ShieldCheck, Hash } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+import { Phone, Calendar, Activity, ShieldCheck, Hash, Globe, User } from 'lucide-vue-next';
 
 const props = defineProps<{
   history: { time: string; msg: string; type: string; date: string }[];
+  globalHistory: { time: string; msg: string; type: string; date: string; sip: string }[];
+  onRefreshGlobal?: () => void;
 }>();
+
+const viewMode = ref<'personal' | 'global'>('personal');
+
+const activeHistory = computed(() => {
+  return viewMode.value === 'personal' ? props.history : props.globalHistory;
+});
+
+const toggleMode = () => {
+  viewMode.value = viewMode.value === 'personal' ? 'global' : 'personal';
+  if (viewMode.value === 'global' && props.onRefreshGlobal) {
+    props.onRefreshGlobal();
+  }
+};
 
 // GitHub style heatmap logic
 const days = 90; // Last 90 days
@@ -12,8 +27,7 @@ const heatmapData = computed(() => {
   const data: Record<string, number> = {};
   const today = new Date();
   
-  // Fill with dummy/historical data if needed or just count from history
-  props.history.forEach(entry => {
+  activeHistory.value.forEach(entry => {
     if (entry.date) {
       data[entry.date] = (data[entry.date] || 0) + 1;
     }
@@ -28,10 +42,12 @@ const heatmapData = computed(() => {
     
     // Intensity mapping
     let color = 'bg-white/5';
-    if (count > 0) color = 'bg-emerald-500/20';
-    if (count > 5) color = 'bg-emerald-500/40';
-    if (count > 10) color = 'bg-emerald-500/70';
-    if (count > 20) color = 'bg-emerald-500';
+    const baseColor = viewMode.value === 'personal' ? 'emerald' : 'indigo';
+    
+    if (count > 0) color = `bg-${baseColor}-500/20`;
+    if (count > 5) color = `bg-${baseColor}-500/40`;
+    if (count > 10) color = `bg-${baseColor}-500/70`;
+    if (count > 20) color = `bg-${baseColor}-500`;
 
     cells.push({ date: dateStr, count, color });
   }
@@ -39,9 +55,9 @@ const heatmapData = computed(() => {
 });
 
 const stats = computed(() => {
-  const calls = props.history.filter(h => h.type === 'call').length;
-  const reg = props.history.filter(h => h.type === 'reg').length;
-  const dtmf = props.history.filter(h => h.type === 'dtmf').length;
+  const calls = activeHistory.value.filter(h => h.type === 'call').length;
+  const reg = activeHistory.value.filter(h => h.type === 'reg').length;
+  const dtmf = activeHistory.value.filter(h => h.type === 'dtmf').length;
   return { calls, reg, dtmf };
 });
 
@@ -68,29 +84,50 @@ const getColorClass = (type: string) => {
   <div class="flex flex-col gap-8 h-full overflow-hidden animate-fade-in">
     
     <!-- Header & Stats -->
-    <div class="grid grid-cols-3 gap-4">
-      <div class="glass p-4 rounded-3xl border-[var(--border-main)] bg-card flex flex-col gap-1 transition-all hover:translate-y-[-2px]">
-        <div class="flex items-center justify-between mb-1">
-          <Phone class="w-4 h-4 text-indigo-400" />
-          <span class="text-[8px] font-black text-text-muted uppercase tracking-widest">Total Calls</span>
+    <div class="flex flex-col gap-4">
+      <div class="flex items-center justify-between px-2">
+        <div class="flex items-center gap-2">
+          <Activity class="w-5 h-5 text-indigo-400" />
+          <h2 class="text-lg font-bold text-text">Activity Intelligence</h2>
         </div>
-        <span class="text-[22px] font-black text-text">{{ stats.calls }}</span>
+        
+        <!-- Toggle Button -->
+        <button 
+          @click="toggleMode"
+          class="flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all duration-300 border"
+          :class="viewMode === 'global' 
+            ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' 
+            : 'bg-white/5 border-[var(--border-main)] text-text-muted hover:bg-white/10'"
+        >
+          <component :is="viewMode === 'global' ? Globe : User" class="w-3 h-3" />
+          {{ viewMode === 'global' ? 'Global Activity' : 'My Activity' }}
+        </button>
       </div>
 
-      <div class="glass p-4 rounded-3xl border-[var(--border-main)] bg-card flex flex-col gap-1 transition-all hover:translate-y-[-2px]">
-        <div class="flex items-center justify-between mb-1">
-          <ShieldCheck class="w-4 h-4 text-emerald-400" />
-          <span class="text-[8px] font-black text-text-muted uppercase tracking-widest">Reg Events</span>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="glass p-4 rounded-3xl border-[var(--border-main)] bg-card flex flex-col gap-1 transition-all hover:translate-y-[-2px]">
+          <div class="flex items-center justify-between mb-1">
+            <Phone class="w-4 h-4 text-indigo-400" />
+            <span class="text-[8px] font-black text-text-muted uppercase tracking-widest">Calls</span>
+          </div>
+          <span class="text-[22px] font-black text-text tabular-nums">{{ stats.calls }}</span>
         </div>
-        <span class="text-[22px] font-black text-text">{{ stats.reg }}</span>
-      </div>
 
-      <div class="glass p-4 rounded-3xl border-[var(--border-main)] bg-card flex flex-col gap-1 transition-all hover:translate-y-[-2px]">
-        <div class="flex items-center justify-between mb-1">
-          <Hash class="w-4 h-4 text-amber-400" />
-          <span class="text-[8px] font-black text-text-muted uppercase tracking-widest">DTMF Tones</span>
+        <div class="glass p-4 rounded-3xl border-[var(--border-main)] bg-card flex flex-col gap-1 transition-all hover:translate-y-[-2px]">
+          <div class="flex items-center justify-between mb-1">
+            <ShieldCheck class="w-4 h-4 text-emerald-400" />
+            <span class="text-[8px] font-black text-text-muted uppercase tracking-widest">Regs</span>
+          </div>
+          <span class="text-[22px] font-black text-text tabular-nums">{{ stats.reg }}</span>
         </div>
-        <span class="text-[22px] font-black text-text">{{ stats.dtmf }}</span>
+
+        <div class="glass p-4 rounded-3xl border-[var(--border-main)] bg-card flex flex-col gap-1 transition-all hover:translate-y-[-2px]">
+          <div class="flex items-center justify-between mb-1">
+            <Hash class="w-4 h-4 text-amber-400" />
+            <span class="text-[8px] font-black text-text-muted uppercase tracking-widest">DTMF</span>
+          </div>
+          <span class="text-[22px] font-black text-text tabular-nums">{{ stats.dtmf }}</span>
+        </div>
       </div>
     </div>
 
@@ -99,15 +136,17 @@ const getColorClass = (type: string) => {
       <div class="flex items-center justify-between px-1">
         <div class="flex items-center gap-2">
           <Calendar class="w-4 h-4 text-primary" />
-          <span class="text-[10px] font-black uppercase tracking-widest text-text">Activity Heatmap</span>
+          <span class="text-[10px] font-black uppercase tracking-widest text-text">
+            {{ viewMode === 'global' ? 'Global' : 'Personal' }} Heatmap
+          </span>
         </div>
         <div class="flex items-center gap-1.5">
           <span class="text-[8px] text-text-muted uppercase">Less</span>
           <div class="flex gap-1">
             <div class="w-2 h-2 rounded-sm bg-white/5"></div>
-            <div class="w-2 h-2 rounded-sm bg-emerald-500/20"></div>
-            <div class="w-2 h-2 rounded-sm bg-emerald-500/50"></div>
-            <div class="w-2 h-2 rounded-sm bg-emerald-500"></div>
+            <div :class="['w-2 h-2 rounded-sm opacity-20', viewMode === 'global' ? 'bg-indigo-500' : 'bg-emerald-500']"></div>
+            <div :class="['w-2 h-2 rounded-sm opacity-50', viewMode === 'global' ? 'bg-indigo-500' : 'bg-emerald-500']"></div>
+            <div :class="['w-2 h-2 rounded-sm', viewMode === 'global' ? 'bg-indigo-500' : 'bg-emerald-500']"></div>
           </div>
           <span class="text-[8px] text-text-muted uppercase">More</span>
         </div>
@@ -138,18 +177,18 @@ const getColorClass = (type: string) => {
     <div class="flex-1 flex flex-col gap-4 overflow-hidden min-h-0">
       <div class="flex items-center gap-2 px-2">
         <Activity class="w-3.5 h-3.5 text-primary" />
-        <span class="text-[10px] font-black uppercase tracking-widest text-text">Chronological Feed</span>
+        <span class="text-[10px] font-black uppercase tracking-widest text-text">Timeline ({{ viewMode }})</span>
       </div>
 
       <div class="flex-1 overflow-y-auto scrollbar-none pr-1">
-        <div v-if="history.length === 0" class="h-full flex flex-col items-center justify-center py-12 opacity-10 border border-dashed border-[var(--border-main)] rounded-3xl gap-4">
+        <div v-if="activeHistory.length === 0" class="h-full flex flex-col items-center justify-center py-12 opacity-10 border border-dashed border-[var(--border-main)] rounded-3xl gap-4">
           <Activity class="w-12 h-12" />
-          <span class="text-[10px] font-black uppercase tracking-[0.4em]">Listening for traffic...</span>
+          <span class="text-[10px] font-black uppercase tracking-[0.4em]">No activity found...</span>
         </div>
 
         <TransitionGroup name="feed-item" tag="div" class="flex flex-col gap-3">
           <div 
-            v-for="(item, i) in history" 
+            v-for="(item, i) in activeHistory" 
             :key="i"
             class="group flex items-start gap-4 p-4 rounded-2xl bg-card border border-[var(--border-main)] hover:bg-[var(--bg-glass-hover)] transition-all relative overflow-hidden"
           >
@@ -163,15 +202,12 @@ const getColorClass = (type: string) => {
                 <span class="text-[8px] font-mono text-text-muted tabular-nums">{{ item.time }}</span>
               </div>
               <p class="text-[11px] text-text-muted leading-tight font-medium">{{ item.msg }}</p>
+              <div v-if="item.date !== new Date().toISOString().split('T')[0]" class="text-[8px] text-text-muted/40 mt-1 uppercase font-black">{{ item.date }}</div>
             </div>
-
-            <!-- Subtle timeline line -->
-            <div v-if="i !== history.length - 1" class="absolute left-[26px] top-[44px] w-[1px] h-8 bg-[var(--border-main)] opacity-30"></div>
           </div>
         </TransitionGroup>
       </div>
     </div>
-
   </div>
 </template>
 

@@ -179,5 +179,40 @@ def log_activity():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/get-activities', methods=['GET'])
+def get_activities():
+    try:
+        activities = []
+        if not os.path.exists(LOGS_DIR):
+            return jsonify([]), 200
+            
+        for filename in os.listdir(LOGS_DIR):
+            if filename.endswith(".log"):
+                # Filename format: {sip}_{date}.log
+                parts = filename.split('_')
+                if len(parts) < 2: continue
+                sip = parts[0]
+                date = parts[1].replace(".log", "")
+                
+                file_path = os.path.join(LOGS_DIR, filename)
+                with open(file_path, "r") as f:
+                    for line in f:
+                        # [13:05:22] [CALL] Message
+                        match = re.match(r'\[(.*?)\] \[(.*?)\] (.*)', line)
+                        if match:
+                            activities.append({
+                                "time": match.group(1),
+                                "type": match.group(2).lower(),
+                                "msg": f"[{sip}] {match.group(3)}",
+                                "date": date,
+                                "sip": sip
+                            })
+        
+        # Sort by date and time (descending)
+        activities.sort(key=lambda x: (x['date'], x['time']), reverse=True)
+        return jsonify(activities[:500]), 200 # Limit to latest 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

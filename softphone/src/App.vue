@@ -51,7 +51,7 @@ const {
   state, connect, disconnect, makeCall, terminateCall, answerCall, sendDTMF, clearLogs,
   enumerateDevices, setAudioOutput,
   hold, unhold, blindTransfer, startAttendedTransfer, completeAttendedTransfer, cancelAttendedTransfer,
-  consultSession
+  consultSession, fetchGlobalActivity
 } = useSIP();
 
 // Derived State
@@ -345,7 +345,11 @@ const handleLogClick = () => {
             </div>
           </div>
           <div class="flex-1 px-8 py-8 overflow-hidden">
-            <ActivityGraph :history="state.activityHistory" />
+            <ActivityGraph 
+          :history="state.activityHistory" 
+          :globalHistory="state.globalActivityHistory"
+          :onRefreshGlobal="fetchGlobalActivity"
+        />
           </div>
           <div class="px-8 py-5 border-t border-[var(--border-main)] bg-card/50">
             <p class="text-[8px] text-center text-text-muted uppercase tracking-[0.3em] font-black">Persisted in logs/daily/{{ config.extension }}_{{ new Date().toISOString().split('T')[0] }}.log</p>

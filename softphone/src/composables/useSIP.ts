@@ -52,8 +52,29 @@ export function useSIP() {
     },
     isAutoAnswerEnabled: false,
     activityHistory: [] as { time: string; msg: string; type: 'call' | 'reg' | 'dtmf' | 'system'; date: string }[],
+    globalActivityHistory: [] as { time: string; msg: string; type: string; date: string; sip: string }[],
     baseIp: '',
   });
+
+  const fetchGlobalActivity = async () => {
+    if (!state.baseIp) return;
+    const isRemote = state.activePreset === 'CSC360 Demo';
+    const configUrl = isRemote 
+      ? import.meta.env.VITE_GET_LOGS_URL_REMOTE 
+      : import.meta.env.VITE_GET_LOGS_URL_LOCAL;
+
+    const endpoint = configUrl
+      ? configUrl.replace('{baseIp}', state.baseIp)
+      : (isRemote ? `https://${state.baseIp}/get_logs.php` : `http://${state.baseIp}:5000/get-activities`);
+
+    try {
+      const resp = await fetch(endpoint);
+      const data = await resp.json();
+      state.globalActivityHistory = data;
+    } catch (e) {
+      console.error('Failed to fetch global activity', e);
+    }
+  };
 
   const trackActivity = async (msg: string, type: 'call' | 'reg' | 'dtmf' | 'system' = 'system') => {
     const entry = {
@@ -66,9 +87,6 @@ export function useSIP() {
     state.activityHistory.unshift(entry);
     if (state.activityHistory.length > 500) state.activityHistory.pop();
     
-    // Save to localStorage for frontend persistence
-    localStorage.setItem('sip_activity_history', JSON.stringify(state.activityHistory));
-
     // Backend Persistence
     if (state.baseIp && ua.value) {
       const sip = (ua.value as any).configuration.uri.user;
@@ -665,6 +683,7 @@ export function useSIP() {
     completeAttendedTransfer,
     cancelAttendedTransfer,
     consultSession,
-    trackActivity
+    trackActivity,
+    fetchGlobalActivity
   };
 };
