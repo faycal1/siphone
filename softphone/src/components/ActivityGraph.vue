@@ -25,7 +25,6 @@ const toggleMode = () => {
 const days = 90; // Last 90 days
 const heatmapData = computed(() => {
   const data: Record<string, number> = {};
-  const today = new Date();
   
   activeHistory.value.forEach(entry => {
     if (entry.date) {
@@ -34,20 +33,33 @@ const heatmapData = computed(() => {
   });
 
   const cells = [];
+  const today = new Date();
+  
   for (let i = days; i >= 0; i--) {
     const d = new Date();
     d.setDate(today.getDate() - i);
-    const dateStr = d.toISOString().split('T')[0];
+    
+    // Use local date format YYYY-MM-DD to match history
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
     const count = data[dateStr] || 0;
     
-    // Intensity mapping
+    // Intensity mapping with literal classes for Tailwind safety
     let color = 'bg-white/5';
-    const baseColor = viewMode.value === 'personal' ? 'emerald' : 'indigo';
-    
-    if (count > 0) color = `bg-${baseColor}-500/20`;
-    if (count > 5) color = `bg-${baseColor}-500/40`;
-    if (count > 10) color = `bg-${baseColor}-500/70`;
-    if (count > 20) color = `bg-${baseColor}-500`;
+    if (viewMode.value === 'personal') {
+      if (count > 0) color = 'bg-emerald-500/20';
+      if (count > 5) color = 'bg-emerald-500/40';
+      if (count > 10) color = 'bg-emerald-500/70';
+      if (count > 20) color = 'bg-emerald-500';
+    } else {
+      if (count > 0) color = 'bg-indigo-500/20';
+      if (count > 5) color = 'bg-indigo-500/40';
+      if (count > 10) color = 'bg-indigo-500/70';
+      if (count > 20) color = 'bg-indigo-500';
+    }
 
     cells.push({ date: dateStr, count, color });
   }
