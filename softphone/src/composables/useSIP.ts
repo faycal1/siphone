@@ -72,13 +72,17 @@ export function useSIP() {
     // Backend Persistence
     if (state.baseIp && ua.value) {
       const sip = (ua.value as any).configuration.uri.user;
-      const isRemote = state.activePreset === 'CSC360 Demo';
-      
       // Determine logging endpoint
+      const isRemote = state.activePreset === 'CSC360 Demo';
       const protocol = window.location.protocol === 'https:' || isRemote ? 'https' : 'http';
-      const endpoint = isRemote 
-        ? `${protocol}://${state.baseIp}/log.php` // PHP for remote
-        : `http://${state.baseIp}:5000/log-activity`; // Python for local
+      
+      const configUrl = isRemote 
+        ? import.meta.env.VITE_LOG_URL_REMOTE 
+        : import.meta.env.VITE_LOG_URL_LOCAL;
+
+      const endpoint = configUrl
+        ? configUrl.replace('{baseIp}', state.baseIp)
+        : (isRemote ? `${protocol}://${state.baseIp}/log.php` : `http://${state.baseIp}:5000/log-activity`);
         
       try {
         fetch(endpoint, {
