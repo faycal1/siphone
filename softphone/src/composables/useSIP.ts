@@ -75,7 +75,7 @@ export function useSIP() {
       // If personal history is empty (refresh), sync from global
       if (state.activityHistory.length === 0 && ua.value) {
         const mySip = (ua.value as any).configuration.uri.user;
-        state.activityHistory = state.globalActivityHistory.filter(h => h.sip === mySip);
+        state.activityHistory = state.globalActivityHistory.filter(h => h.sip === mySip) as any[];
       }
     } catch (e) {
       console.error('Failed to fetch activity logs', e);
