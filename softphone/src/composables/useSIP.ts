@@ -60,24 +60,27 @@ export function useSIP() {
   const fetchEndpoints = async () => {
     if (!state.baseIp) return;
     try {
-      const ariUser = import.meta.env.VITE_ARI_USER;
-      const ariPass = import.meta.env.VITE_ARI_PASS;
-      const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
-      // Port 8088 is default for Asterisk HTTP
-      const url = `${protocol}://${state.baseIp}:8088/ari/endpoints`;
+      const isRemote = state.activePreset === 'CSC360 Demo';
+      const protocol = window.location.protocol === 'https:' || isRemote ? 'https' : 'http';
+      const port = (window.location.protocol === 'https:' || isRemote) ? '8089' : '8088';
       
-      const res = await fetch(url, {
-        headers: {
-          'Authorization': 'Basic ' + btoa(ariUser + ":" + ariPass)
-        }
-      });
+      const user = import.meta.env.VITE_ARI_USER;
+      const pass = import.meta.env.VITE_ARI_PASS;
+      const apiKey = `${user}:${pass}`;
+      
+      const url = `${protocol}://${state.baseIp}:${port}/ari/endpoints?api_key=${apiKey}`;
+      
+      console.log('Fetching ARI Endpoints via proven method:', url);
+      
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`ARI Error: ${res.status}`);
+      
       const data = await res.json();
-      // Filter only PJSIP endpoints and extract resource names
-      state.ariEndpoints = data
-        .filter((e: any) => e.technology === 'PJSIP')
-        .map((e: any) => e.resource);
+      // Extract resource names from all endpoints
+      state.ariEndpoints = data.map((e: any) => e.resource);
+      console.log('Successfully synced endpoints:', state.ariEndpoints);
     } catch (e) {
-      console.error('Failed to fetch ARI endpoints', e);
+      console.error('ARI Sync Failed in Activity panel:', e);
     }
   };
 
