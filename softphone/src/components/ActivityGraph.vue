@@ -5,16 +5,18 @@ import { Phone, Calendar, Activity, ShieldCheck, Hash, Globe, User } from 'lucid
 const props = defineProps<{
   history: { time: string; msg: string; type: string; date: string }[];
   globalHistory: { time: string; msg: string; type: string; date: string; sip: string }[];
+  ariEndpoints: string[];
   onRefreshGlobal?: () => void;
 }>();
 
 const viewMode = ref<'personal' | 'global' | 'specific'>('personal');
 const selectedSip = ref<string>('');
 
-// Get unique SIPs from global history for the selector
+// Get unique SIPs from BOTH history and ARI endpoints
 const availableSips = computed(() => {
-  const sips = new Set(props.globalHistory.map(h => h.sip));
-  return Array.from(sips).sort();
+  const fromHistory = props.globalHistory.map(h => h.sip);
+  const sips = new Set([...fromHistory, ...props.ariEndpoints]);
+  return Array.from(sips).filter(s => s && s !== 'unknown').sort();
 });
 
 const activeHistory = computed(() => {

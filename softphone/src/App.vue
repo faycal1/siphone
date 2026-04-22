@@ -348,6 +348,7 @@ const handleLogClick = () => {
             <ActivityGraph 
           :history="state.activityHistory" 
           :globalHistory="state.globalActivityHistory"
+          :ariEndpoints="state.ariEndpoints"
           :onRefreshGlobal="fetchGlobalActivity"
         />
           </div>
