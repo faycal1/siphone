@@ -41,7 +41,7 @@ watch(isDarkMode, () => {
 const config = ref({
   wsUrl: import.meta.env.VITE_REMOTE_WS_URL || 'ws://127.0.0.1:8088/ws',
   extension: import.meta.env.VITE_REMOTE_EXTENSION || '101',
-  password: import.meta.env.VITE_REMOTE_PASSWORD || 'REDACTED',
+  password: import.meta.env.VITE_REMOTE_PASSWORD || 'changeme',
   name: import.meta.env.VITE_REMOTE_WS_URL ? 'Production' : 'Local Dev'
 });
 

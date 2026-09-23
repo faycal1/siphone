@@ -74,8 +74,8 @@ VITE_REMOTE_PASSWORD=your_secure_password
 
 ### SIP Accounts
 The Asterisk server is pre-configured with two WebRTC extensions for testing:
-- **Extension 101**: Password `REDACTED`
-- **Extension 102**: Password `REDACTED`
+- **Extension 101**: Password `changeme`
+- **Extension 102**: Password `changeme`
 
 ### Dynamic UI Config
 You can change the active extension and Asterisk server IP directly in the app:
